@@ -14,8 +14,6 @@ public partial class GitParser
         string workingDir, string repoUrl)
     {
         using MemoryStream memoryStream = new();
-
-//       PipedProcessResult processResult = await CliRun.RunPipedAsync("git", "--no-pager log -p", workingDir);
         
         await Cli.Wrap("git")
             .WithArguments("--no-pager log -p")
