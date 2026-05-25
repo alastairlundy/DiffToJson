@@ -9,8 +9,8 @@
     <EnableAoTAnalyzer>true</EnableAoTAnalyzer>
     <PublishAot>true</PublishAot>
     <AssemblyName>GitDiffToJsonLCli</AssemblyName>
-    <RootNamespace>GitDiffToJsonL.Cli</RootNamespace>
-    <PackageId>GitDiffToJsonL.Cli</PackageId>
+    <RootNamespace>GitDiffToJsonLCli</RootNamespace>
+    <PackageId>GitDiffToJsonLCli</PackageId>
     <Title>GitDiffToJsonL.Cli</Title>
     <Authors>Alastair Lundy</Authors>
     <RepositoryUrl>https://github.com/alastairlundy/GitDiffToJsonLCli</RepositoryUrl>
