@@ -100,7 +100,7 @@ public class LicenseAnalyzer
         return trimmed;
     }
 
-    private string? FindLicenseFile(string workingDir)
+    private static string? FindLicenseFile(string workingDir)
     {
         string[] priorityFiles = ["LICENSE.md", "LICENSE.txt", "LICENSE"];
         
