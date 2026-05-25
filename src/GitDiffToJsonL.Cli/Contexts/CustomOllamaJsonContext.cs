@@ -1,7 +1,7 @@
 ﻿using System.Text.Json.Serialization;
 using OllamaSharp.Models.Chat;
 
-namespace GitDiffToJsonL.Cli.Contexts;
+namespace GitDiffToJsonLCli.Contexts;
 
 [JsonSerializable(typeof(ChatRequest))]
 [JsonSerializable(typeof(ChatResponseStream))]

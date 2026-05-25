@@ -1,5 +1,5 @@
 ﻿using System.CommandLine;
-using GitDiffToJsonL.Cli;
+using GitDiffToJsonLCli;
 
 Option<DirectoryInfo> repoDirectoryOption = new("--repo-directory")
 {

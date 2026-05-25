@@ -4,7 +4,7 @@ using System.Text.RegularExpressions;
 using CliWrap;
 using CliWrap.Buffered;
 
-namespace GitDiffToJsonL.Cli;
+namespace GitDiffToJsonLCli;
 
 public partial class GitParser
 {
@@ -15,7 +15,9 @@ public partial class GitParser
     {
         using MemoryStream memoryStream = new();
 
-        await CliWrap.Cli.Wrap("git")
+//       PipedProcessResult processResult = await CliRun.RunPipedAsync("git", "--no-pager log -p", workingDir);
+        
+        await Cli.Wrap("git")
             .WithArguments("--no-pager log -p")
             .WithWorkingDirectory(workingDir)
             .WithStandardOutputPipe(PipeTarget.ToStream(memoryStream))

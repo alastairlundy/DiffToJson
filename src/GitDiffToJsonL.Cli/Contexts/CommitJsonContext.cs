@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace GitDiffToJsonL.Cli.Contexts;
+namespace GitDiffToJsonLCli.Contexts;
 
 [JsonSourceGenerationOptions(WriteIndented = false)]
 [JsonSerializable(typeof(CommitRecord))]

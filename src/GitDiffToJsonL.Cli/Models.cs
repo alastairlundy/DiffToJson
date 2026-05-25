@@ -1,4 +1,4 @@
-namespace GitDiffToJsonL.Cli;
+namespace GitDiffToJsonLCli;
 
 public record CommitRecord(
     string Diff,
