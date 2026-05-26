@@ -1,10 +1,10 @@
-# GitDiffToJsonL
+# GitDiffToJson
 
 A CLI for detecting and serializing Git commit Diffs and commit messages from a local Git repository to a JSONL file.
 
 This can be useful for preparing git commit diffs and message data for training AI/ML models or similar use cases.
 
-**NOTE**: Whilst the CLI implements a Regex pattern matching based PII detector for detecting email addresses in Commit Messages and redacting them, redaction of email addresses is not guaranteed. If commit messages contain sensitive information conduct a human review theoutput JSONL file.
+**NOTE**: Whilst the CLI implements a Regex pattern matching based PII detector for detecting email addresses in Commit Messages and redacting them, redaction of email addresses is not guaranteed. If commit messages contain sensitive information conduct a human review of the output JSONL file.
 
 ## Documented Information
 The following is provided in the output JSONL files:
@@ -43,13 +43,13 @@ Alternatively, you can manually provide the license name using the `--license` f
 ### Standard Build
 Build the project using the .NET CLI:
 ```bash
-dotnet build src/GitDiffToJsonLCli/GitDiffToJsonLCli.csproj
+dotnet build src/GitDiffToJsonCli/GitDiffToJsonCli.csproj
 ```
 
 ### Running the Tool
 You can run the tool directly from the source:
 ```bash
-dotnet run --project src/GitDiffToJsonLCli/GitDiffToJsonLCli.csproj -- [args]
+dotnet run --project src/GitDiffToJsonCli/GitDiffToJsonCli.csproj -- [args]
 ```
 
 ### Publishing (Native AOT)

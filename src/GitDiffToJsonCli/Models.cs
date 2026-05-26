@@ -1,4 +1,4 @@
-﻿/*
+/*
     Copyright 2026 Alastair Lundy
 
    Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,12 +14,12 @@
    limitations under the License.
  */
 
-using System.Text.Json.Serialization;
+namespace GitDiffToJsonCli;
 
-namespace GitDiffToJsonLCli.Contexts;
-
-[JsonSourceGenerationOptions(WriteIndented = false)]
-[JsonSerializable(typeof(CommitRecord))]
-public partial class CommitJsonContext : JsonSerializerContext
-{
-}
+public record CommitRecord(
+    string Diff,
+    string CommitMessage,
+    string RepoName,
+    string License,
+    string RepoUrl
+);

@@ -1,4 +1,4 @@
-/*
+﻿/*
     Copyright 2026 Alastair Lundy
 
    Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,12 +14,15 @@
    limitations under the License.
  */
 
-namespace GitDiffToJsonLCli;
+using System.Text.Json.Serialization;
+using OllamaSharp.Models.Chat;
 
-public record CommitRecord(
-    string Diff,
-    string CommitMessage,
-    string RepoName,
-    string License,
-    string RepoUrl
-);
+namespace GitDiffToJsonCli.Contexts;
+
+[JsonSerializable(typeof(ChatRequest))]
+[JsonSerializable(typeof(ChatResponseStream))]
+[JsonSerializable(typeof(ChatDoneResponseStream))]
+public partial class CustomOllamaJsonContext : JsonSerializerContext
+{
+    
+}

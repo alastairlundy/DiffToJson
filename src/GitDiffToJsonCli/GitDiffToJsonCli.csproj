@@ -7,12 +7,12 @@
     <Nullable>enable</Nullable>
     <IsTrimmable>true</IsTrimmable>
     <EnableAoTAnalyzer>true</EnableAoTAnalyzer>
-    <AssemblyName>GitDiffToJsonL</AssemblyName>
-    <RootNamespace>GitDiffToJsonLCli</RootNamespace>
-    <PackageId>GitDiffToJsonL</PackageId>
-    <Title>GitDiffToJsonL</Title>
+    <AssemblyName>GitDiffToJson</AssemblyName>
+    <RootNamespace>GitDiffToJsonCli</RootNamespace>
+    <PackageId>GitDiffToJson</PackageId>
+    <Title>GitDiffToJson</Title>
     <Authors>Alastair Lundy</Authors>
-    <RepositoryUrl>https://github.com/alastairlundy/GitDiffToJsonL</RepositoryUrl>
+    <RepositoryUrl>https://github.com/alastairlundy/GitDiffToJson</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
     <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
@@ -23,7 +23,7 @@
 
 This can be useful for preparing git commit diffs and message data for training AI/ML models or similar use cases.</Description>
     <Copyright>Copyright (c) Alastair Lundy 2026</Copyright>
-    <PackageTags>git diff, diff, JSONL</PackageTags>
+    <PackageTags>git diff, diff, commit, JSONL, JSON</PackageTags>
     <PackageReleaseNotes>Initial Release</PackageReleaseNotes>
   </PropertyGroup>
 

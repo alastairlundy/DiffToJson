@@ -19,7 +19,7 @@ using Microsoft.Extensions.AI;
 using OllamaSharp;
 using OpenAI;
 
-namespace GitDiffToJsonLCli;
+namespace GitDiffToJsonCli;
 
 public class LicenseAnalyzer
 {
