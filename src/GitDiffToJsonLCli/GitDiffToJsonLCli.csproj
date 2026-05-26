@@ -17,6 +17,14 @@
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
     <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
     <IsPackable>true</IsPackable>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <Description>A CLI for detecting and serializing Git commit Diffs and commit messages from a local Git repository to a JSONL file.
+
+This can be useful for preparing git commit diffs and message data for training AI/ML models or similar use cases.</Description>
+    <Copyright>Copyright (c) Alastair Lundy 2026</Copyright>
+    <PackageTags>git diff, diff, JSONL</PackageTags>
+    <PackageReleaseNotes>Initial Release</PackageReleaseNotes>
   </PropertyGroup>
 
   <PropertyGroup>
@@ -45,6 +53,13 @@
 
   <ItemGroup>
     <None Remove="PiiTest\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="..\..\README.md">
+      <Link>README.md</Link>
+      <PackagePath>README.md</PackagePath>
+    </Content>
   </ItemGroup>
 
 </Project>
