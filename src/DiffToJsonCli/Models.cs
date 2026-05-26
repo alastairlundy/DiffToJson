@@ -14,7 +14,7 @@
    limitations under the License.
  */
 
-namespace GitDiffToJsonCli;
+namespace DiffToJsonCli;
 
 public record CommitRecord(
     string Diff,

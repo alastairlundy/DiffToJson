@@ -20,7 +20,7 @@ using System.Text.RegularExpressions;
 using CliInvoke;
 using CliInvoke.Core;
 
-namespace GitDiffToJsonCli;
+namespace DiffToJsonCli;
 
 public partial class GitParser
 {

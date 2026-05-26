@@ -45,19 +45,70 @@ If you have the .NET 10 Runtime installed, you can install the CLI as a dotnet t
 
 To install it, use:
 ```bash
-dotnet tool install -g GitDiffToJson
+dotnet tool install -g DiffToJson
 ```
 
 To update it use:
 ```bash
-dotnet tool update -g GitDiffToJson
+dotnet tool update -g DiffToJson
 ```
 
 To uninstall it, use:
 ```bash
-dotnet tool uninstall -g GitDiffToJson
+dotnet tool uninstall -g DiffToJson
 ```
 
+## Quick Start
+
+### Without LLM - Specified Licence Name
+```bash
+diff-to-json --repo-directory "C:\path\to\your\repo" --license "[LICENSE_NAME]" -o "C:\output\folder"
+```
+
+### OpenAI Compatible
+```bash
+diff-to-json --repo-directory "C:\path\to\your\repo" --model-id "[MODEL_NAME]" --endpoint-url "[OPENAI_COMPATIBLE_ENDPOINT]" --api-key "your-api-key" -o "C:\output\folder"
+```
+
+### Ollama (Local)
+You can substitute the model id for any of [Ollama's Supported Models](https://ollama.com/search)
+
+```bash
+diff-to-json --repo-directory "C:\path\to\your\repo" --model-id "qwen3.5:4b" --endpoint-url "http://localhost:11434" --provider "ollama" -o "C:\output\folder"
+```
+**Note**: The CLI does not automatically pull the AI model; it must exist on your device at the time the CLI calls the Ollama API endpoint.
+
+### Ollama Cloud
+You can substitute the model id for any of [Ollama's Cloud Supported Models](https://ollama.com/search?c=cloud)
+
+#### Ollama Cloud Models via Ollama CLI
+```bash
+diff-to-json --repo-directory "C:\path\to\your\repo" --model-id "gemma4:31b-cloud" --endpoint-url "http://localhost:11434" --api-key "your-api-key" --provider "ollama" -o "C:\output\folder"
+```
+
+#### Ollama Cloud API
+```bash
+diff-to-json --repo-directory "C:\path\to\your\repo" --model-id "gemma4:31b-cloud" --endpoint-url "https://ollama.com/" --api-key "your-api-key" --provider "ollama" -o "C:\output\folder"
+```
+
+This will analyse the specified repository and create a file named `{repo-name}-commits.jsonl` inside the specified output folder.
+
+## CLI Parameters
+
+| Parameter Name         | Type            | Optional/Required | Default Value             | Notes                                                                                   |
+|:-----------------------|:----------------|:------------------|:--------------------------|:----------------------------------------------------------------------------------------|
+| `--repo-directory`     | `DirectoryInfo` | Optional          | Current Working Directory | The local git repository directory to analyze.                                          |
+| `--repo-url`           | `string`        | Optional          | None                      | The URL of the git repository to be included in the JSONL output.                       |
+| `--model-id`           | `string`        | Conditional       | None                      | Required if `--license` is not provided. The ID of the AI model to use.                 |
+| `--endpoint-url`       | `string`        | Conditional       | None                      | Required if `--license` is not provided. The endpoint URL of the OpenAI compatible API. |
+| `--api-key`            | `string`        | Optional          | None                      | The API key for the AI provider.                                                        |
+| `--provider`           | `string`        | Optional          | OpenAI Compatible         | The AI provider ID (e.g., `ollama`).                                                    |
+| `--license`            | `string`        | Optional          | None                      | Manually specify the license name. If provided, LLM license detection is skipped.       |
+| `--output-file` / `-o` | `string`        | Optional          | Repo Directory            | The directory path where the output file will be saved.                                 |
+
+### Potential Surprises
+
+* **Output File Naming**: The `--output-file` (or `-o`) parameter specifies a **directory**, not a full file path. The tool will automatically name the file `{repoName}-commits.jsonl` within that directory. If no output path is provided, it defaults to the repository directory.
 
 ## How to Build
 

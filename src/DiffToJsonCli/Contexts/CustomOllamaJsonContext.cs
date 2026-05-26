@@ -15,11 +15,14 @@
  */
 
 using System.Text.Json.Serialization;
+using OllamaSharp.Models.Chat;
 
-namespace GitDiffToJsonCli.Contexts;
+namespace DiffToJsonCli.Contexts;
 
-[JsonSourceGenerationOptions(WriteIndented = false)]
-[JsonSerializable(typeof(CommitRecord))]
-public partial class CommitJsonContext : JsonSerializerContext
+[JsonSerializable(typeof(ChatRequest))]
+[JsonSerializable(typeof(ChatResponseStream))]
+[JsonSerializable(typeof(ChatDoneResponseStream))]
+public partial class CustomOllamaJsonContext : JsonSerializerContext
 {
+    
 }

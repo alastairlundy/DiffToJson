@@ -15,41 +15,47 @@
  */
 
 using System.CommandLine;
-using GitDiffToJsonCli;
+using DiffToJsonCli;
 
 Option<DirectoryInfo> repoDirectoryOption = new("--repo-directory")
 {
     Description = "The local git repository directory. Falls back to the current directory if not provided.",
+    DefaultValueFactory = _ => new DirectoryInfo(Directory.GetCurrentDirectory()),
     Required = false
 };
 
 Option<string> repoUrlOption = new("--repo-url")
 {
     Description = "The URL of the git repository.",
+    DefaultValueFactory = _ => "",
     Required = false
 };
 
 Option<string> modelIdOption = new("--model-id")
 {
     Description = "The model id of the AI model to use",
-    Required = true
+    DefaultValueFactory = _ => "",
+    Required = false
 };
 
 Option<string> endpointUrlOption = new("--endpoint-url")
 {
     Description = "The endpoint URL of the OpenAI compatible API endpoint to use.",
-    Required = true
+    DefaultValueFactory = _ => "",
+    Required = false
 };
 
 Option<string> apiKeyOption = new("--api-key")
 {
     Description = "The API key of the AI provider to use.",
+    DefaultValueFactory = _ => "",
     Required = false,
 };
 
 Option<string> providerOption = new("--provider")
 {
     Description = "The Id of the AI provider to use.",
+    DefaultValueFactory = _ => "",
     Required = false,
 };
 
@@ -67,7 +73,7 @@ Option<string> outputFilePathOption = new("--output-file", ["-o"])
     DefaultValueFactory = _ => ""
 };
 
-RootCommand rootCommand = new("Detects and Serializes Git Diff and Commits to a .JSONL file.")
+RootCommand rootCommand = new("Detects and Serializes Git Diffs and Commits to a .JSONL file.")
 {
     repoDirectoryOption,
     repoUrlOption,
