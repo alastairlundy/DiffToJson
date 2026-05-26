@@ -109,10 +109,8 @@ public partial class GitParser
         await writer.WriteLineAsync(json);
     }
 
-    public string Sanitize(string text)
-    {
-        return PiiRegex.Replace(text, "REDACTED");
-    }
+    public string Sanitize(string text) 
+        => PiiRegex.Replace(text, "REDACTED");
 
     [GeneratedRegex(@"<([^>\s]+@[^>\s]+\.[^>\s]+)>|\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b", RegexOptions.Compiled)]
     private static partial Regex MyRegex();
