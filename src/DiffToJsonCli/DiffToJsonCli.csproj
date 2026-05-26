@@ -24,7 +24,7 @@
 
 This can be useful for preparing git commit diffs and message data for training AI/ML models or similar use cases.</Description>
     <Copyright>Copyright (c) Alastair Lundy 2026</Copyright>
-    <PackageTags>git diff, diff, commit, JSONL, JSON</PackageTags>
+    <PackageTags>git, diff, commit, JSONL, JSON</PackageTags>
     <PackageReleaseNotes>Initial Release</PackageReleaseNotes>
     <Version>0.1.0</Version>
     <AssemblyVersion>0.1.0.0</AssemblyVersion>
