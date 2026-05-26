@@ -63,7 +63,7 @@ public class LicenseAnalyzer
     public async Task<string> AnalyzeLicenseAsync(string workingDir)
     {
         await Console.Out.WriteLineAsync($"Checking for license file in {workingDir}");
-        string? licenseContent = FindLicenseFile(workingDir);
+        string? licenseContent = await FindLicenseFile(workingDir);
 
 #if DEBUG
         await Console.Out.WriteLineAsync($"License file content length: {licenseContent?.Length ?? 0}");
@@ -116,7 +116,7 @@ public class LicenseAnalyzer
         return trimmed;
     }
 
-    private static string? FindLicenseFile(string workingDir)
+    private static async Task<string?> FindLicenseFile(string workingDir)
     {
         string[] priorityFiles = ["LICENSE.md", "LICENSE.txt", "LICENSE"];
         
@@ -125,9 +125,10 @@ public class LicenseAnalyzer
             string path = Path.Combine(workingDir, fileName);
             if (File.Exists(path))
             {
-                return File.ReadAllText(path);
+                return await File.ReadAllTextAsync(path);
             }
         }
+
         return null;
     }
 }
