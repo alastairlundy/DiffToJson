@@ -7,7 +7,6 @@
     <Nullable>enable</Nullable>
     <IsTrimmable>true</IsTrimmable>
     <EnableAoTAnalyzer>true</EnableAoTAnalyzer>
-    <PublishAot>true</PublishAot>
     <AssemblyName>GitDiffToJsonLCli</AssemblyName>
     <RootNamespace>GitDiffToJsonLCli</RootNamespace>
     <PackageId>GitDiffToJsonLCli</PackageId>
@@ -17,14 +16,24 @@
     <RepositoryType>git</RepositoryType>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
     <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
+    <IsPackable>true</IsPackable>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <!-- Default: don't use Native AOT for publishing as Tool -->
+    <EnablePublishAot Condition="'$(PublishAot)'==''">false</EnablePublishAot>
+  </PropertyGroup>
+  
   <ItemGroup>
     <PackageReference Include="CliInvoke" Version="2.7.0" />
     <PackageReference Include="Microsoft.Extensions.AI.OpenAI" Version="10.6.0" />
     <PackageReference Include="OllamaSharp" Version="5.4.25" />
     <PackageReference Include="System.CommandLine" Version="2.0.8" />
   </ItemGroup>
+
+  <PropertyGroup Condition="'$(PublishAot)'=='true'">
+    <PublishAot>true</PublishAot>
+  </PropertyGroup>
 
   <ItemGroup>
     <Compile Remove="PiiTest\**" />
