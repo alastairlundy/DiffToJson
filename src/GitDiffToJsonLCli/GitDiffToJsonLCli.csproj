@@ -7,12 +7,12 @@
     <Nullable>enable</Nullable>
     <IsTrimmable>true</IsTrimmable>
     <EnableAoTAnalyzer>true</EnableAoTAnalyzer>
-    <AssemblyName>GitDiffToJsonLCli</AssemblyName>
+    <AssemblyName>GitDiffToJsonL</AssemblyName>
     <RootNamespace>GitDiffToJsonLCli</RootNamespace>
-    <PackageId>GitDiffToJsonLCli</PackageId>
-    <Title>GitDiffToJsonL.Cli</Title>
+    <PackageId>GitDiffToJsonL</PackageId>
+    <Title>GitDiffToJsonL</Title>
     <Authors>Alastair Lundy</Authors>
-    <RepositoryUrl>https://github.com/alastairlundy/GitDiffToJsonLCli</RepositoryUrl>
+    <RepositoryUrl>https://github.com/alastairlundy/GitDiffToJsonL</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
     <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
