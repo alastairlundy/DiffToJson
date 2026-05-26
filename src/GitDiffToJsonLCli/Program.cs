@@ -19,7 +19,8 @@ using GitDiffToJsonLCli;
 
 Option<DirectoryInfo> repoDirectoryOption = new("--repo-directory")
 {
-    Description = "The local git repository directory. Falls back to the current directory if not provided."
+    Description = "The local git repository directory. Falls back to the current directory if not provided.",
+    Required = false
 };
 
 Option<string> repoUrlOption = new("--repo-url")
@@ -54,12 +55,19 @@ Option<string> providerOption = new("--provider")
 
 Option<string> licenseOption = new("--license")
 {
-    Description = "The license name to use for the JSON.",
+    Description = "The licence name to use for the JSON.",
     Required = false,
-    DefaultValueFactory = result => ""
+    DefaultValueFactory = _ => ""
 };
 
-RootCommand rootCommand = new("Git Diff to JSONL converter")
+Option<string> outputFilePathOption = new("--output-file", ["-o"])
+{
+    Description = "The output file path. If not specified, the default is the repository directory path.",
+    Required = false,
+    DefaultValueFactory = _ => ""
+};
+
+RootCommand rootCommand = new("Detects and Serializes Git Diff and Commits to a .JSONL file.")
 {
     repoDirectoryOption,
     repoUrlOption,
@@ -67,7 +75,8 @@ RootCommand rootCommand = new("Git Diff to JSONL converter")
     endpointUrlOption,
     providerOption,
     apiKeyOption,
-    licenseOption
+    licenseOption,
+    outputFilePathOption
 };
 
 rootCommand.SetAction(async result =>
@@ -77,9 +86,22 @@ rootCommand.SetAction(async result =>
         DirectoryInfo targetDir = result.GetValue(repoDirectoryOption) ?? new DirectoryInfo(Directory.GetCurrentDirectory());
         string repoUrl = result.GetValue(repoUrlOption) ?? "";
         string repoName = targetDir.Name;
-        string outputPath = $"{repoName}-commits.jsonl";
 
-        Console.WriteLine($"Analyzing repository: {repoName} at {targetDir.FullName}");
+        string outputFilePath = result.GetValue(outputFilePathOption) ?? "";
+        
+        string outputPath;
+        if (string.IsNullOrEmpty(outputFilePath))
+        {
+            outputPath = $"{targetDir.FullName}{Path.DirectorySeparatorChar}{repoName}-commits.jsonl";
+        }
+        else
+        {
+            DirectoryInfo directoryInfo = new(outputFilePath);
+
+            outputPath = Path.Combine(directoryInfo.FullName, $"{repoName}-commits.jsonl");
+        }
+
+        Console.WriteLine($"Analyzing repository: {targetDir.Name} at {targetDir.FullName}");
         
         string provider = result.GetValue(providerOption) ?? "";
         string apiKey = result.GetValue(apiKeyOption) ?? "";
