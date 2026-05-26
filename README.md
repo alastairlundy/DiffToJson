@@ -36,7 +36,28 @@ To enable automatic license detection, you must provide an AI model configuratio
 
 Alternatively, you can manually provide the license name using the `--license` flag to skip the LLM call.
 
-**Note**: Provider Ids are case insensitive.
+**Note**: Provider Ids are case-insensitive.
+
+## Installation
+
+### As a .NET Tool
+If you have the .NET 10 Runtime installed, you can install the CLI as a dotnet tool from the NuGet Gallery.
+
+To install it, use:
+```bash
+dotnet tool install -g GitDiffToJson
+```
+
+To update it use:
+```bash
+dotnet tool update -g GitDiffToJson
+```
+
+To uninstall it, use:
+```bash
+dotnet tool uninstall -g GitDiffToJson
+```
+
 
 ## How to Build
 
