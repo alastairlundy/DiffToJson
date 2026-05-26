@@ -38,4 +38,4 @@ jobs:
 
       # Push all nupkgs (no sleeps needed)
       - name: Push all nupkgs to NuGet.org
-      run: dotnet nuget push src/DiffToJsonCli/bin/Release/DiffToJson.nupkg --api-key ${{steps.login.outputs.NUGET_API_KEY}}  -s https://api.nuget.org/v3/index.json --skip-duplicate
+        run: dotnet nuget push src/DiffToJsonCli/bin/Release/*.nupkg --api-key ${{steps.login.outputs.NUGET_API_KEY}}  -s https://api.nuget.org/v3/index.json --skip-duplicate
