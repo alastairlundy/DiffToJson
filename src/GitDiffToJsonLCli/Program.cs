@@ -52,6 +52,13 @@ Option<string> providerOption = new("--provider")
     Required = false,
 };
 
+Option<string> licenseOption = new("--license")
+{
+    Description = "The license name to use for the JSON.",
+    Required = false,
+    DefaultValueFactory = result => ""
+};
+
 RootCommand rootCommand = new("Git Diff to JSONL converter")
 {
     repoDirectoryOption,
@@ -60,6 +67,7 @@ RootCommand rootCommand = new("Git Diff to JSONL converter")
     endpointUrlOption,
     providerOption,
     apiKeyOption,
+    licenseOption
 };
 
 rootCommand.SetAction(async result =>
@@ -78,14 +86,26 @@ rootCommand.SetAction(async result =>
         string? endpointUrl = result.GetValue(endpointUrlOption);
         string? modelId = result.GetValue(modelIdOption);
         
-        ArgumentException.ThrowIfNullOrEmpty(endpointUrl);
-        ArgumentException.ThrowIfNullOrEmpty(modelId);
-        
-        LicenseAnalyzer analyzer = new(provider, endpointUrl, modelId, apiKey);
-        string license = await analyzer.AnalyzeLicenseAsync(targetDir.FullName);
-        await Console.Out.WriteLineAsync($"Detected License: {license}");
+        string licenseProvided = result.GetValue(licenseOption) ?? "";
 
-        GitParser parser = new GitParser();
+        string license;
+        
+        if (string.IsNullOrEmpty(licenseProvided))
+        {
+            ArgumentException.ThrowIfNullOrEmpty(endpointUrl);
+            ArgumentException.ThrowIfNullOrEmpty(modelId);
+            
+            LicenseAnalyzer analyzer = new(provider, endpointUrl, modelId, apiKey); 
+            license = await analyzer.AnalyzeLicenseAsync(targetDir.FullName);
+            await Console.Out.WriteLineAsync($"Detected License: {license}");
+        }
+        else
+        {
+            license = licenseProvided;
+            await Console.Out.WriteLineAsync($"Using specified License: {license}");
+        }
+
+        GitParser parser = new();
         await parser.ParseStreamingAsync(repoName, license, outputPath, targetDir.FullName, repoUrl);
 
         await Console.Out.WriteLineAsync($"Successfully wrote commits to {outputPath}");
