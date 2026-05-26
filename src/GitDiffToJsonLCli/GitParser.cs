@@ -17,8 +17,8 @@
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using CliWrap;
-using CliWrap.Buffered;
+using CliInvoke;
+using CliInvoke.Core;
 
 namespace GitDiffToJsonLCli;
 
@@ -28,16 +28,12 @@ public partial class GitParser
     public async Task ParseStreamingAsync(string repoName, string license, string outputPath,
         string workingDir, string repoUrl)
     {
-        using MemoryStream memoryStream = new();
+        await using PipedProcessResult processResult = await CliRun
+            .RunPipedAsync(OperatingSystem.IsWindows() ? "git.exe" : "git", 
+                "--no-pager log -p", workingDir);
         
-        await Cli.Wrap("git")
-            .WithArguments("--no-pager log -p")
-            .WithWorkingDirectory(workingDir)
-            .WithStandardOutputPipe(PipeTarget.ToStream(memoryStream))
-            .ExecuteBufferedAsync();
-
-        memoryStream.Position = 0;
-        using StreamReader reader = new(memoryStream, Encoding.UTF8);
+        processResult.StandardOutput.Position = 0;
+        using StreamReader reader = new(processResult.StandardOutput, Encoding.UTF8);
         await using StreamWriter writer = new StreamWriter(outputPath, false, Encoding.UTF8);
 
         string? line;
