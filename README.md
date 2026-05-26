@@ -1,4 +1,4 @@
-# GitDiffToJson
+# DiffToJson
 
 A CLI for detecting and serializing Git commit Diffs and commit messages from a local Git repository to a .JSONL file.
 
