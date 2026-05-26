@@ -1,27 +1,27 @@
 # GitDiffToJson
 
-A CLI for detecting and serializing Git commit Diffs and commit messages from a local Git repository to a JSONL file.
+A CLI for detecting and serializing Git commit Diffs and commit messages from a local Git repository to a .JSONL file.
 
 This can be useful for preparing git commit diffs and message data for training AI/ML models or similar use cases.
 
-**NOTE**: Whilst the CLI implements a Regex pattern matching based PII detector for detecting email addresses in Commit Messages and redacting them, redaction of email addresses is not guaranteed. If commit messages contain sensitive information conduct a human review of the output JSONL file.
+**NOTE**: Whilst the CLI implements a Regex pattern matching based PII detector for detecting email addresses in Commit Messages and redacting them, redaction of email addresses is not guaranteed. If commit messages contain sensitive information, conduct a human review of the output .JSONL file.
 
 ## Documented Information
-The following is provided in the output JSONL files:
+The following is provided in output .JSONL files:
 * The Git Diff
 * The Git Commit Message associated with the diff
-* The License Name if a LICENSE.txt, LICENSE.md, or LICENSE.txt file is present in the repo directory - An LLM call is required to compute this. As a fallback "Unknown" is returned otherwise.
-* The Git project name - Obtained from the Git Repo Directory name
+* The Licence Name if a LICENSE.txt, LICENSE.md, or LICENSE.txt file is present in the repo directory – An LLM call is required to compute this. As a fallback "Unknown" is returned otherwise.
+* The Git project name – Obtained from the Git Repo Directory name
 * The Git Repo URL if provided by the CLI called.
 
 ## Configuration & Requirements
 
 ### System Requirements
 * **Git**: The `git` binary must be installed and available in your system's `PATH`.
-* **Runtime**: .NET 10 SDK is required for building and running the CLI. If running the CLI as a dotnet tool only the .NET runtime is required.
+* **Runtime**: .NET 10 SDK is required for building and running the CLI. If running the CLI as a dotnet tool, only the .NET runtime is required.
 
 ### LLM Setup for License Detection
-To enable automatic license detection, you must provide an AI model configuration via CLI arguments:
+To enable automatic licence detection, you must provide an AI model configuration via CLI arguments:
 * `--model-id`: The ID of the AI model to use (Required if `--license` is not provided).
 * `--endpoint-url`: The endpoint URL of the OpenAI-compatible API (Required if `--license` is not provided).
 * `--provider`: The AI provider ID (e.g., `ollama`). If not specified, it defaults to OpenAI compatible provider mode.
@@ -29,12 +29,12 @@ To enable automatic license detection, you must provide an AI model configuratio
 
 #### Supported Providers:
 
-| AI Provider | Endpoint Type | Supporting NuGet Package | CLI Provider Id to use | Notes |
-|-|-|-|-|-|
-| Ollama | OpenAI Compatible | ``OllamaSharp`` | ``ollama`` | Compatible wth Ollama Local and Ollama Cloud - Provide the desired Ollama endpoint URL. API Key required for Ollama Cloud. | 
-| OpenAI Compatible | OpenAI Compatible | ``Microsoft.Extensions.AI.OpenAI`` | N/A | Endpoint URL is required. API Key may be required by the provider. |
+| AI Provider       | Endpoint Type     | Supporting NuGet Package           | CLI Provider Id to use | Notes                                                                                                                      |
+|-------------------|-------------------|------------------------------------|------------------------|----------------------------------------------------------------------------------------------------------------------------|
+| Ollama            | OpenAI Compatible | ``OllamaSharp``                    | ``ollama``             | Compatible wth Ollama Local and Ollama Cloud - Provide the desired Ollama endpoint URL. API Key required for Ollama Cloud. | 
+| OpenAI Compatible | OpenAI Compatible | ``Microsoft.Extensions.AI.OpenAI`` | N/A                    | Endpoint URL is required. API Key may be required by the provider.                                                         |
 
-Alternatively, you can manually provide the license name using the `--license` flag to skip the LLM call.
+Alternatively, you can manually provide the licence name using the `--license` flag to skip the LLM call.
 
 **Note**: Provider Ids are case-insensitive.
 
@@ -83,10 +83,11 @@ Replace `[runtime-identifier]` with the appropriate RID for your platform (e.g.,
 ## Technical Details
 
 ### PII Redaction
-The tool employs a regex-based approach to detect and redact email addresses within commit messages to help prevent the leakage of personally identifiable information (PII). Due to the nature of regex, this is a best-effort implementation and does not guarantee 100% redaction.
+The tool uses a regex-based approach to detect and redact email addresses within commit messages to help prevent the leakage of personally identifiable information (PII). Due to the nature of regex, this is a best-effort implementation and does not guarantee 100% redaction.
+For sensitive git email addresses, always conduct a human review. 
 
 ### License Detection Logic
-The tool automatically discovers license information by searching for `LICENSE.md`, `LICENSE.txt`, or `LICENSE` files in the repository root. If found, the content is sent to a configured LLM (via `OllamaSharp` or `Microsoft.Extensions.AI.OpenAI`) to extract the license name. If no file is found or the LLM cannot determine the license, it falls back to "Unknown".
+The tool automatically discovers licence information by searching for `LICENSE.md`, `LICENSE.txt`, or `LICENSE` files in the repository root. If found, the content is sent to a configured LLM (via `OllamaSharp` or `Microsoft.Extensions.AI.OpenAI`) to extract the license name. If no file is found or the LLM cannot determine the licence, it falls back to "Unknown".
 
 ### Native AOT Compatibility
 The application is designed for Native AOT compatibility, ensuring fast startup times and a small deployment footprint.
@@ -103,4 +104,4 @@ In no particular order:
 * Support for disabling PII redaction
 
 ## License
-This project contains AI generated code and human written code. All human written code in this project is licensed under the Apache 2.0 license.
+This project contains AI-generated code and human-written code. All human written code in this project is licensed under the Apache 2.0 licence.
