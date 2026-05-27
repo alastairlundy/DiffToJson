@@ -21,7 +21,7 @@ using OpenAI;
 
 namespace DiffToJsonCli;
 
-public class LicenseAnalyzer
+internal class LicenseAnalyzer
 {
     private readonly IChatClient _client;
 

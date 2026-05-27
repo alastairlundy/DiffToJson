@@ -22,7 +22,7 @@ using CliInvoke.Core;
 
 namespace DiffToJsonCli;
 
-public partial class GitParser
+internal partial class GitParser
 {
     private static readonly Regex PiiRegex = MyRegex();
     public async Task ParseStreamingAsync(string repoName, string license, string outputPath,
