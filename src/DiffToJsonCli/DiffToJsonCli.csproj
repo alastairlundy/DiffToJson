@@ -20,15 +20,16 @@
     <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
     <IsPackable>true</IsPackable>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <EnableSingleFileAnalyzer>true</EnableSingleFileAnalyzer>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <Description>A CLI for detecting and serializing Git commit Diffs and commit messages from a local Git repository to a JSONL file.
 
 This can be useful for preparing git commit diffs and message data for training AI/ML models or similar use cases.</Description>
     <Copyright>Copyright (c) Alastair Lundy 2026</Copyright>
     <PackageTags>git, diff, commit, JSONL, JSON</PackageTags>
-    <PackageReleaseNotes>Initial Release</PackageReleaseNotes>
-    <Version>0.1.0</Version>
-    <AssemblyVersion>0.1.0.0</AssemblyVersion>
+    <PackageReleaseNotes>Fixed an issue where the package uploaded to NuGet was not marked as a .NET tool</PackageReleaseNotes>
+    <Version>0.1.1</Version>
+    <AssemblyVersion>0.1.1.0</AssemblyVersion>
   </PropertyGroup>
 
   <PropertyGroup>
