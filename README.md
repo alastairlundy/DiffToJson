@@ -1,6 +1,6 @@
 # DiffToJson
 
-![NuGet Version](https://img.shields.io/nuget/v/DiffToJson?style=flat-square)
+![Latest NuGet Version](https://img.shields.io/nuget/v/DiffToJson?style=flat-square)
 ![NuGet Downloads](https://img.shields.io/nuget/dt/DiffToJson?style=flat-square)
 ![GitHub License](https://img.shields.io/github/license/alastairlundy/DiffToJson?style=flat-square)
 ![OpenSSF Scorecard Score](https://img.shields.io/ossf-scorecard/github.com/alastairlundy/DiffToJson?style=flat-square&label=OpenSSF%20Scorecard%20Score)
