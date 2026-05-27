@@ -160,5 +160,15 @@ In no particular order:
 * Support for working with ``Microsoft.Extensions.Compliance.Redaction`` to enable support for different implementations and types of PII redaction.
 * Support for disabling PII redaction
 
+## Star History
+
+<a href="https://www.star-history.com/?repos=alastairlundy%2FDiffToJson&type=date&logscale=&legend=top-left">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=alastairlundy/DiffToJson&type=date&theme=dark&logscale&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=alastairlundy/DiffToJson&type=date&logscale&legend=top-left" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=alastairlundy/DiffToJson&type=date&logscale&legend=top-left" />
+ </picture>
+</a>
+
 ## License
 This project contains AI-generated code and human-written code. All human written code in this project is licensed under the Apache 2.0 license.
