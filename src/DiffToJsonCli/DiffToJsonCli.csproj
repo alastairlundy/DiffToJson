@@ -11,6 +11,7 @@
     <ToolCommandName>diff-to-json</ToolCommandName>
     <RootNamespace>DiffToJsonCli</RootNamespace>
     <PackageId>DiffToJson</PackageId>
+    <PackAsTool>true</PackAsTool>
     <Title>DiffToJson</Title>
     <Authors>Alastair Lundy</Authors>
     <RepositoryUrl>https://github.com/alastairlundy/DiffToJson</RepositoryUrl>
