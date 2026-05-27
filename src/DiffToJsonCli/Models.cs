@@ -16,7 +16,7 @@
 
 namespace DiffToJsonCli;
 
-internal record CommitRecord(
+public record CommitRecord(
     string Diff,
     string CommitMessage,
     string RepoName,
