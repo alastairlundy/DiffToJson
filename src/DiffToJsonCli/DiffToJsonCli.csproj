@@ -67,4 +67,8 @@ This can be useful for preparing git commit diffs and message data for training 
     </Content>
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\DiffToJsonLib\DiffToJsonLib.csproj" />
+  </ItemGroup>
+
 </Project>

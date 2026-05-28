@@ -14,7 +14,7 @@
    limitations under the License.
  */
 
-namespace DiffToJsonCli;
+namespace DiffToJsonLib.Models;
 
 public record CommitRecord(
     string Diff,

@@ -14,12 +14,12 @@
    limitations under the License.
  */
 
-using System.Text.Json.Serialization;
+namespace DiffToJsonLib.Abstractions;
 
-namespace DiffToJsonCli.Contexts;
-
-[JsonSourceGenerationOptions(WriteIndented = false)]
-[JsonSerializable(typeof(CommitRecord))]
-public partial class CommitJsonContext : JsonSerializerContext
+public interface IDiffJsonFileWriter
 {
+    Task WriteToJsonFileAsync(IAsyncEnumerable<CommitRecord> commits, string filePath, CancellationToken cancellationToken = default);
+    
+    Task WriteToJsonFileAsync(ICollection<CommitRecord> commits, string filePath,
+        CancellationToken cancellationToken = default);
 }

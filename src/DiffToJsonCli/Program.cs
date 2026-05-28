@@ -16,6 +16,9 @@
 
 using System.CommandLine;
 using DiffToJsonCli;
+using DiffToJsonCli.Helpers;
+using DiffToJsonLib;
+using Microsoft.Extensions.AI;
 
 Option<DirectoryInfo> repoDirectoryOption = new("--repo-directory")
 {
@@ -122,9 +125,17 @@ rootCommand.SetAction(async result =>
         {
             ArgumentException.ThrowIfNullOrEmpty(endpointUrl);
             ArgumentException.ThrowIfNullOrEmpty(modelId);
+
+            IChatClient client = ChatClientCreator.CreateClient(provider, endpointUrl, modelId, apiKey);
+            AILicenseAnalyzer analyzer = new(client);
+
+            FileInfo? fileInfo = await LicenseFileFinder.FindLicenseFile(targetDir.FullName);
             
-            LicenseAnalyzer analyzer = new(provider, endpointUrl, modelId, apiKey); 
-            license = await analyzer.AnalyzeLicenseAsync(targetDir.FullName);
+            if(fileInfo is not null)
+                license = await analyzer.AnalyzeLicenseAsync(fileInfo) ?? "Unknown";
+            else
+                license = "Unknown";
+            
             await Console.Out.WriteLineAsync($"Detected License: {license}");
         }
         else
@@ -133,7 +144,7 @@ rootCommand.SetAction(async result =>
             await Console.Out.WriteLineAsync($"Using specified License: {license}");
         }
 
-        GitParser parser = new();
+        GitCommitParser parser = new();
         await parser.ParseStreamingAsync(repoName, license, outputPath, targetDir.FullName, repoUrl);
 
         await Console.Out.WriteLineAsync($"Successfully wrote commits to {outputPath}");
