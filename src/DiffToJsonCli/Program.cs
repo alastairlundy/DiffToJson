@@ -115,7 +115,9 @@ rootCommand.SetAction(async result =>
         {
             DirectoryInfo directoryInfo = new(outputFilePath);
 
-            outputPath = Path.Combine(directoryInfo.FullName, $"{repoName}-commits.jsonl");
+            outputPath = outputFilePath.EndsWith(".jsonl") ?
+                Path.Combine(directoryInfo.FullName, outputFilePath) :
+                Path.Combine(directoryInfo.FullName, $"{repoName}-commits.jsonl");
         }
 
         Console.WriteLine($"Analyzing repository: {targetDir.Name} at {targetDir.FullName}");
