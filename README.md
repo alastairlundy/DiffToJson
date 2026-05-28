@@ -18,7 +18,7 @@ The following is provided in output .JSONL files:
 * The Git Commit Message associated with the diff
 * The license Name if a LICENSE.txt, LICENSE.md, or LICENSE.txt file is present in the repo directory – An LLM call is required to compute this. As a fallback "Unknown" is returned otherwise.
 * The Git project name – Obtained from the Git Repo Directory name
-* The Git Repo URL if provided by the CLI called.
+* The Git Repo URL if provided by the CLI caller.
 
 ## Configuration & Requirements
 
@@ -39,7 +39,10 @@ To enable automatic license detection, you must provide an AI model configuratio
 |-------------------|-------------------|------------------------------------|------------------------|----------------------------------------------------------------------------------------------------------------------------|
 | Ollama            | OpenAI Compatible | ``OllamaSharp``                    | ``ollama``             | Compatible wth Ollama Local and Ollama Cloud - Provide the desired Ollama endpoint URL. API Key required for Ollama Cloud. | 
 | Ollama Cloud        | OpenAI Compatible | ``OllamaSharp``                    | ``ollama-cloud``             | API Key is required. | 
+| OpenAI | OpenAI | ``Microsoft.Extensions.AI.OpenAI`` | ``openai``                   |  API Key is required.                                                         |
 | OpenAI Compatible | OpenAI Compatible | ``Microsoft.Extensions.AI.OpenAI`` | N/A                    | Endpoint URL is required. API Key may be required by the provider.                                                         |
+| Anthropic | Anthropic Compatible | ``Anthropic`` | ``anthropic``                    |  API Key is required.                                                         |
+| Anthropic Compatible | Anthropic Compatible | ``Anthropic`` | ``anthropic-compatible``                    | Endpoint URL is required. API Key may be required by the provider.                                                         |
 
 Alternatively, you can manually provide the license name using the `--license` flag to skip the LLM call.
 
@@ -141,7 +144,7 @@ Replace `[runtime-identifier]` with the appropriate RID for your platform (e.g.,
 ## Technical Details
 
 ### PII Redaction
-The tool uses a regex-based approach to detect and redact email addresses within commit messages to help prevent the leakage of personally identifiable information (PII). Due to the nature of regex, this is a best-effort implementation and does not guarantee 100% redaction.
+The tool uses a regex-based approach to detect and redact email addresses within commit messages to help prevent the leaking of personally identifiable information (PII). Due to the nature of regex, this is a best-effort implementation and does not guarantee 100% redaction.
 For sensitive git email addresses, always conduct a human review. 
 
 ### License Detection Logic
