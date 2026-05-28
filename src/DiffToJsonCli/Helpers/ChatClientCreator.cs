@@ -47,6 +47,16 @@ internal static class ChatClientCreator
                     .AsIChatClient(model);
                 break;
             }
+            case "ollama-cloud":
+            {
+                HttpClient httpClient = new();
+                httpClient.BaseAddress = new Uri("https://ollama.com");
+                httpClient.DefaultRequestHeaders.Add("Authorization: Bearer", apiKey);
+                
+                client = new OllamaApiClient(httpClient, model, CustomOllamaJsonContext.Default);
+
+                break;
+            }
             case "ollama":
             {
                 OllamaApiClient.Configuration configuration = new OllamaApiClient.Configuration

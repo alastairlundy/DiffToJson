@@ -38,6 +38,7 @@ To enable automatic license detection, you must provide an AI model configuratio
 | AI Provider       | Endpoint Type     | Supporting NuGet Package           | CLI Provider Id to use | Notes                                                                                                                      |
 |-------------------|-------------------|------------------------------------|------------------------|----------------------------------------------------------------------------------------------------------------------------|
 | Ollama            | OpenAI Compatible | ``OllamaSharp``                    | ``ollama``             | Compatible wth Ollama Local and Ollama Cloud - Provide the desired Ollama endpoint URL. API Key required for Ollama Cloud. | 
+| Ollama Cloud        | OpenAI Compatible | ``OllamaSharp``                    | ``ollama-cloud``             | API Key is required. | 
 | OpenAI Compatible | OpenAI Compatible | ``Microsoft.Extensions.AI.OpenAI`` | N/A                    | Endpoint URL is required. API Key may be required by the provider.                                                         |
 
 Alternatively, you can manually provide the license name using the `--license` flag to skip the LLM call.
@@ -94,7 +95,7 @@ diff-to-json --repo-directory "C:\path\to\your\repo" --model-id "gemma4:31b-clou
 
 #### Ollama Cloud API
 ```bash
-diff-to-json --repo-directory "C:\path\to\your\repo" --model-id "gemma4:31b-cloud" --endpoint-url "https://ollama.com/" --api-key "your-api-key" --provider "ollama" -o "C:\output\folder"
+diff-to-json --repo-directory "C:\path\to\your\repo" --model-id "gemma4:31b-cloud" --api-key "your-api-key" --provider "ollama-cloud" -o "C:\output\folder"
 ```
 
 This will analyse the specified repository and create a file named `{repo-name}-commits.jsonl` inside the specified output folder.
@@ -106,7 +107,7 @@ This will analyse the specified repository and create a file named `{repo-name}-
 | `--repo-directory`     | `DirectoryInfo` | Optional          | Current Working Directory | The local git repository directory to analyze.                                          |
 | `--repo-url`           | `string`        | Optional          | None                      | The URL of the git repository to be included in the JSONL output.                       |
 | `--model-id`           | `string`        | Conditional       | None                      | Required if `--license` is not provided. The ID of the AI model to use.                 |
-| `--endpoint-url`       | `string`        | Conditional       | None                      | Required if `--license` is not provided. The endpoint URL of the OpenAI compatible API. |
+| `--endpoint-url`       | `string`        | Optional       | None                      | Required if `--license` is not provided, or if the API provider is not ``openai``, ``ollama-cloud``, or ``anthropic``. The endpoint URL of the API. |
 | `--api-key`            | `string`        | Optional          | None                      | The API key for the AI provider.                                                        |
 | `--provider`           | `string`        | Optional          | OpenAI Compatible         | The AI provider ID (e.g., `ollama`).                                                    |
 | `--license`            | `string`        | Optional          | None                      | Manually specify the license name. If provided, LLM license detection is skipped.       |
