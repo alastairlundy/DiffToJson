@@ -17,7 +17,6 @@
 using System.ClientModel;
 using Anthropic;
 using Anthropic.Core;
-using Microsoft.Extensions.AI;
 using OllamaSharp;
 using OpenAI;
 
@@ -29,7 +28,6 @@ internal static class ChatClientCreator
     {
         IChatClient client;
         
-        ArgumentException.ThrowIfNullOrEmpty(endpoint);
         ArgumentException.ThrowIfNullOrEmpty(model);
         
         if(string.IsNullOrEmpty(provider))
@@ -37,12 +35,23 @@ internal static class ChatClientCreator
         
         switch (provider.ToLower())
         {
+            case "anthropic-compatible":
+            {
+                ArgumentException.ThrowIfNullOrEmpty(endpoint);
+                
+                client = new AnthropicClient(new ClientOptions
+                    {
+                        ApiKey = apiKey,
+                        BaseUrl = endpoint
+                    })
+                    .AsIChatClient(model);
+                break;
+            }
             case "anthropic":
             {
                 client = new AnthropicClient(new ClientOptions
                     {
                         ApiKey = apiKey,
-                        BaseUrl = endpoint
                     })
                     .AsIChatClient(model);
                 break;
