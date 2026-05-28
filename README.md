@@ -114,11 +114,7 @@ This will analyse the specified repository and create a file named `{repo-name}-
 | `--api-key`            | `string`        | Optional          | None                      | The API key for the AI provider.                                                        |
 | `--provider`           | `string`        | Optional          | OpenAI Compatible         | The AI provider ID (e.g., `ollama`).                                                    |
 | `--license`            | `string`        | Optional          | None                      | Manually specify the license name. If provided, LLM license detection is skipped.       |
-| `--output-file` / `-o` | `string`        | Optional          | Repo Directory            | The directory path where the output file will be saved.                                 |
-
-### Potential Surprises
-
-* **Output File Naming**: The `--output-file` (or `-o`) parameter specifies a **directory**, not a full file path. The tool will automatically name the file `{repoName}-commits.jsonl` within that directory. If no output path is provided, it defaults to the repository directory.
+| `--output-file` / `-o` | `string`        | Optional          | Repo Directory            | The  path where the output file will be saved.                                 |
 
 ## How to Build
 

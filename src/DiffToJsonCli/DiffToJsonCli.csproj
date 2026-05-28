@@ -28,8 +28,8 @@ This can be useful for preparing git commit diffs and message data for training 
     <Copyright>Copyright (c) Alastair Lundy 2026</Copyright>
     <PackageTags>git, diff, commit, JSONL, JSON</PackageTags>
     <PackageReleaseNotes>Fixed an issue where the package uploaded to NuGet was not marked as a .NET tool</PackageReleaseNotes>
-    <Version>0.1.1</Version>
-    <AssemblyVersion>0.1.1.0</AssemblyVersion>
+    <Version>0.2.0</Version>
+    <AssemblyVersion>0.2.0.0</AssemblyVersion>
   </PropertyGroup>
 
   <PropertyGroup>
