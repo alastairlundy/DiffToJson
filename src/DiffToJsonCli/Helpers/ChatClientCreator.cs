@@ -21,6 +21,16 @@ internal static class ChatClientCreator
         
         switch (provider.ToLower())
         {
+            case "anthropic":
+            {
+                client = new AnthropicClient(new ClientOptions
+                    {
+                        ApiKey = apiKey,
+                        BaseUrl = endpoint
+                    })
+                    .AsIChatClient(model);
+                break;
+            }
             case "ollama":
             {
                 OllamaApiClient.Configuration configuration = new OllamaApiClient.Configuration

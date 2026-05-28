@@ -38,6 +38,7 @@ This can be useful for preparing git commit diffs and message data for training 
   </PropertyGroup>
   
   <ItemGroup>
+    <PackageReference Include="Anthropic" Version="12.23.0" />
     <PackageReference Include="CliInvoke" Version="2.7.0" />
     <PackageReference Include="Microsoft.Extensions.AI.OpenAI" Version="10.6.0" />
     <PackageReference Include="OllamaSharp" Version="5.4.25" />
