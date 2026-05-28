@@ -14,27 +14,45 @@
    limitations under the License.
  */
 
-using System.Text;
-using System.Text.Json;
-using System.Text.RegularExpressions;
-using CliInvoke;
+using System.Runtime.CompilerServices;
 using CliInvoke.Core;
 
-namespace DiffToJsonCli;
+namespace DiffToJsonLib;
 
-internal partial class GitParser
+public class GitCommitParser : IGitCommitParser
 {
-    private static readonly Regex PiiRegex = MyRegex();
-    public async Task ParseStreamingAsync(string repoName, string license, string outputPath,
-        string workingDir, string repoUrl)
+    private readonly IPiiRedactor _piiRedactor;
+    private readonly IProcessInvoker _processInvoker;
+
+    public GitCommitParser(IPiiRedactor piiRedactor, 
+        IProcessInvoker processInvoker)
     {
-        await using PipedProcessResult processResult = await CliRun
-            .RunPipedAsync(OperatingSystem.IsWindows() ? "git.exe" : "git", 
-                "--no-pager log -p", workingDir);
+        _piiRedactor = piiRedactor;
+        _processInvoker = processInvoker;
+    }
+
+    private async Task<PipedProcessResult> GetDiffsAsync(string workingDir, CancellationToken cancellationToken)
+    {
+        using ProcessConfiguration processConfiguration = new(OperatingSystem.IsWindows() ? "git.exe" : "git",
+            "--no-pager log -p", workingDir);
+        
+        return await _processInvoker.ExecutePipedAsync(processConfiguration, cancellationToken: cancellationToken);
+    }
+    
+    public async Task<CommitRecord[]> ParseCommitsToArrayAsync(string repoName, string license,
+        string workingDir, string repoUrl, CancellationToken cancellationToken)
+    {
+        return await ParseCommitsStreamAsync(repoName, license, workingDir, repoUrl, cancellationToken)
+            .ToArrayAsync(cancellationToken: cancellationToken);
+    }
+
+    public async IAsyncEnumerable<CommitRecord> ParseCommitsStreamAsync(string repoName, string license, string workingDir,
+        string repoUrl, [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        await using PipedProcessResult processResult = await GetDiffsAsync(workingDir, cancellationToken).ConfigureAwait(false);
         
         processResult.StandardOutput.Position = 0;
-        using StreamReader reader = new(processResult.StandardOutput, Encoding.UTF8);
-        await using StreamWriter writer = new StreamWriter(outputPath, false, Encoding.UTF8);
+        using StreamReader reader = new(processResult.StandardOutput, Encoding.Default);
 
         string? line;
         bool isCollectingMessage = false;
@@ -42,14 +60,20 @@ internal partial class GitParser
         
         StringBuilder messageBuilder = new();
         StringBuilder diffBuilder = new();
-
-        while ((line = await reader.ReadLineAsync()) != null)
+        
+        while ((line = await reader.ReadLineAsync(cancellationToken)) != null)
         {
             if (line.StartsWith("commit "))
             {
                 if (messageBuilder.Length > 0 && !string.IsNullOrWhiteSpace(diffBuilder.ToString()))
                 {
-                    await WriteRecord(writer, messageBuilder.ToString(), diffBuilder.ToString(), repoName, license, repoUrl);
+                    yield return new CommitRecord(
+                        diffBuilder.ToString().TrimStart().TrimEnd(),
+                        _piiRedactor.RedactPii(messageBuilder.ToString().TrimStart().TrimEnd()),
+                        RepoName: repoName,
+                        License: license,
+                        RepoUrl: repoUrl
+                    );
                 }
                 
                 messageBuilder.Clear();
@@ -88,30 +112,16 @@ internal partial class GitParser
                 diffBuilder.AppendLine(line);
             }
         }
-
+        
         if (messageBuilder.Length > 0 && !string.IsNullOrWhiteSpace(diffBuilder.ToString()))
-        {
-            await WriteRecord(writer, messageBuilder.ToString(), diffBuilder.ToString(), repoName, license, repoUrl);
+        { 
+            yield return new CommitRecord(
+                diffBuilder.ToString().TrimStart().TrimEnd(),
+                _piiRedactor.RedactPii(messageBuilder.ToString().TrimStart().TrimEnd()),
+                RepoName: repoName,
+                License: license,
+                RepoUrl: repoUrl
+            );
         }
     }
-
-    private async Task WriteRecord(StreamWriter writer, string message, string diff, string repoName, string license, string repoUrl)
-    {
-        CommitRecord record = new CommitRecord(
-            diff.TrimStart().TrimEnd(),
-            Sanitize(message.TrimStart().TrimEnd()),
-            RepoName: repoName,
-            License: license,
-            RepoUrl: repoUrl
-        );
-
-        string json = JsonSerializer.Serialize(record, CommitJsonContext.Default.CommitRecord);
-        await writer.WriteLineAsync(json);
-    }
-
-    public string Sanitize(string text) 
-        => PiiRegex.Replace(text, "REDACTED");
-
-    [GeneratedRegex(@"<([^>\s]+@[^>\s]+\.[^>\s]+)>|\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b", RegexOptions.Compiled)]
-    private static partial Regex MyRegex();
 }

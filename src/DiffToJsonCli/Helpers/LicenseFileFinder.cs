@@ -1,4 +1,4 @@
-/*
+﻿/*
     Copyright 2026 Alastair Lundy
 
    Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,12 +14,23 @@
    limitations under the License.
  */
 
-namespace DiffToJsonCli;
+namespace DiffToJsonCli.Helpers;
 
-public record CommitRecord(
-    string Diff,
-    string CommitMessage,
-    string RepoName,
-    string License,
-    string RepoUrl
-);
+internal class LicenseFileFinder
+{
+    internal static async Task<FileInfo?> FindLicenseFile(string workingDir)
+    {
+        string[] priorityFiles = ["LICENSE.md", "LICENSE.txt", "LICENSE"];
+        
+        foreach (string fileName in priorityFiles)
+        {
+            string path = Path.Combine(workingDir, fileName);
+            if (File.Exists(path))
+            {
+                return new FileInfo(path);
+            }
+        }
+
+        return null;
+    }
+}
