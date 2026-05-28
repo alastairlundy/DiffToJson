@@ -157,8 +157,6 @@ The application is designed for Native AOT compatibility, ensuring fast startup 
 These are some things I'd like to work towards in future versions but are not guaranteed to appear in future versions.
 
 In no particular order:
-* Anthropic support
-* Anthropic Compatible Endpoint support
 * AWS Bedrock support
 * Support for specifying the name of the output file
 * Support for working with ``Microsoft.Extensions.Compliance.Redaction`` to enable support for different implementations and types of PII redaction.
