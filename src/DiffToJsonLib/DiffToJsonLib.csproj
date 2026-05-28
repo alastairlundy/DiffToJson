@@ -5,10 +5,16 @@
         <LangVersion>14</LangVersion>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
-        <Title>DiffToJsonLib</Title>
-        <Authors />
+        <Title>DiffToJson.Lib</Title>
+        <Authors>Alastair Lundy</Authors>
         <IsPackable>false</IsPackable>
         <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+        <PackageId>DiffToJson.Lib</PackageId>
+        <Copyright>Copyright (c) Alastair Lundy 2026</Copyright>
+        <RepositoryUrl>https://github.com/alastairlundy/difftojson</RepositoryUrl>
+        <RepositoryType>git</RepositoryType>
+        <PackageReleaseNotes>Initial Release</PackageReleaseNotes>
+        <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
     </PropertyGroup>
 
     <ItemGroup>
