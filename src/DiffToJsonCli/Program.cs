@@ -15,10 +15,18 @@
  */
 
 using System.CommandLine;
-using DiffToJsonCli;
-using DiffToJsonCli.Helpers;
-using DiffToJsonLib;
-using Microsoft.Extensions.AI;
+using CliInvoke;
+using CliInvoke.Core;
+using Microsoft.Extensions.DependencyInjection;
+
+IServiceCollection services = new  ServiceCollection();
+
+services.AddSingleton<IProcessInvoker, ProcessInvoker>();
+services.AddSingleton<IPiiRedactor, RegexPiiRedactor>();
+
+services.AddSingleton<IDiffJsonFileWriter, DiffJsonFileWriter>();
+services.AddSingleton<IGitCommitParser, GitCommitParser>();
+
 
 Option<DirectoryInfo> repoDirectoryOption = new("--repo-directory")
 {
@@ -120,19 +128,25 @@ rootCommand.SetAction(async result =>
         string licenseProvided = result.GetValue(licenseOption) ?? "";
 
         string license;
+
+        IServiceProvider serviceProvider;
         
         if (string.IsNullOrEmpty(licenseProvided))
         {
             ArgumentException.ThrowIfNullOrEmpty(endpointUrl);
             ArgumentException.ThrowIfNullOrEmpty(modelId);
+            
+            IChatClient chatClient = ChatClientCreator.CreateClient(provider, apiKey, endpointUrl, modelId);
 
-            IChatClient client = ChatClientCreator.CreateClient(provider, endpointUrl, modelId, apiKey);
-            AILicenseAnalyzer analyzer = new(client);
-
+            services.AddSingleton<ILicenseAnalyzer>(sp => new AILicenseAnalyzer(chatClient));
+            serviceProvider = services.BuildServiceProvider();
+            
+            ILicenseAnalyzer licenseAnalyzer = serviceProvider.GetRequiredService<ILicenseAnalyzer>();
+            
             FileInfo? fileInfo = await LicenseFileFinder.FindLicenseFile(targetDir.FullName);
             
             if(fileInfo is not null)
-                license = await analyzer.AnalyzeLicenseAsync(fileInfo) ?? "Unknown";
+                license = await licenseAnalyzer.AnalyzeLicenseAsync(fileInfo) ?? "Unknown";
             else
                 license = "Unknown";
             
@@ -140,12 +154,18 @@ rootCommand.SetAction(async result =>
         }
         else
         {
+            serviceProvider = services.BuildServiceProvider();
             license = licenseProvided;
             await Console.Out.WriteLineAsync($"Using specified License: {license}");
         }
 
-        GitCommitParser parser = new();
-        await parser.ParseStreamingAsync(repoName, license, outputPath, targetDir.FullName, repoUrl);
+        IGitCommitParser commitParser = serviceProvider.GetRequiredService<IGitCommitParser>();
+        IDiffJsonFileWriter diffJsonFileWriter = serviceProvider.GetRequiredService<IDiffJsonFileWriter>();
+
+        IAsyncEnumerable<CommitRecord> records = commitParser.ParseCommitsStreamAsync(repoName, license, targetDir.FullName,
+            repoUrl, CancellationToken.None);
+
+        await diffJsonFileWriter.WriteToJsonFileAsync(records, outputFilePath, CancellationToken.None);
 
         await Console.Out.WriteLineAsync($"Successfully wrote commits to {outputPath}");
     }
