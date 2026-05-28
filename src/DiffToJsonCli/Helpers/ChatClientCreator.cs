@@ -68,6 +68,8 @@ internal static class ChatClientCreator
             }
             case "ollama":
             {
+                ArgumentException.ThrowIfNullOrEmpty(endpoint);
+
                 OllamaApiClient.Configuration configuration = new OllamaApiClient.Configuration
                 {
                     JsonSerializerContext = CustomOllamaJsonContext.Default,
@@ -78,8 +80,18 @@ internal static class ChatClientCreator
 
                 break;
             }
+            case "openai":
+            {
+                client = new OpenAIClient(new ApiKeyCredential(apiKey))
+                    .GetChatClient(model)
+                    .AsIChatClient();
+                
+                break;
+            }
+            case "openai-compatible":
             default:
             {
+                ArgumentException.ThrowIfNullOrEmpty(endpoint);
                 client = new OpenAIClient(new ApiKeyCredential(apiKey), new OpenAIClientOptions
                     {
                         Endpoint = new  Uri(endpoint)
