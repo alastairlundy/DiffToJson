@@ -1,13 +1,13 @@
 # AI Contribution Policy
 
 ## Purpose
-This project leverages AI to accelerate development while ensuring that engineering judgment and human accountability remain primary. We aim to prevent the erosion of code quality and maintain a clear audit trail of how logic is synthesized.
+This project leverages AI to accelerate development while ensuring that engineering judgment and human accountability remain paramount. We aim to prevent the erosion of code quality and maintain a clear audit trail of how logic is synthesized.
 
 ## 1. Accountability & Integrity
 The human contributor is the **Author of Record**. You are responsible for:
 - The correctness, security, and performance of the submitted code.
 - Ensuring the code adheres to the project's design patterns and standards.
-- Verifying that no licensed code (GPL, etc.) was inadvertently ingested via AI.
+- Verifying that no non-permissively licensed code (GPL, copyrighted code etc.) was inadvertently ingested via AI.
 
 ### Prohibition of License Washing
 The use of AI for "license washing" is strictly prohibited. This includes:
@@ -21,11 +21,11 @@ We categorize AI usage by the depth of its integration into the final codebase.
 | Engagement Level | Description | Disclosure Requirement | Commit Credit |
 | :--- | :--- | :--- | :--- |
 | **Non-Code Assistance** | Rubber ducking, Q&A, debugging, or brainstorming. | None | N/A |
-| **Light** | Basic boilerplate, renaming, or "Next Edit Suggestions" (single-line autocompletes). | PR Description | N/A |
+| **Light** | Basic boilerplate, renaming, or "Next Edit Suggestions" (single-line code autocomplete). | PR Description | N/A |
 | **Moderate** | Complex regex, utility functions, and "Code Completions" (multi-line generated blocks). | PR Description | `Assisted-by: [AI Agent] <email> - Used [Model Name]` |
 | **Heavy** | Entire classes, modules, or architectural patterns. | PR Description + Code Comment | `Co-authored-by: [AI Agent] <email> - Used [Model Name]` |
 
-*Note: Commit trailers should be placed at the end of the commit message, separated from the commit body by a single blank line. These can be added manually or by using the `--trailer` parameter during the commit process (e.g., `git commit --trailer "Assisted-by: Claude <claude@anthropic.com> - Used Claude 3.5 Sonnet" -m "Your commit message"`).*
+*Note: Commit trailers should be placed at the end of the commit message, separated from the commit body by a single blank line. These can be added manually or by using the `--trailer` parameter during the commit process (e.g., `git commit --trailer "Assisted-by: Claude <no-reply@anthropic.com> - Used Claude 4.6 Sonnet" -m "Your commit message"`).*
 
 ### Restrictions on Heavy Usage
 Due to the risk of architectural drift and technical debt, **Heavy** engagement is restricted to **Trusted Contributors and Maintainers**. Outside contributors should seek maintainer approval before submitting PRs where AI has generated substantial architectural components.
