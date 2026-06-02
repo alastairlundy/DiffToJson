@@ -28,3 +28,18 @@ All contributions must follow the processes and quality standards defined in [CO
 ## Important Constraints
 - **PII Redaction**: Performed within the library's data extraction process; however, regex-based redaction is not guaranteed to be 100% successful. Human review is required for sensitive data.
 - **License Detection**: Optional feature. If enabled, the CLI provides an AI client to the library's `LicenseDetector` to determine the license from `LICENSE*` files, falling back to "Unknown".
+
+## Agent skills
+
+### Issue tracker
+
+Issues and PRDs live as GitHub issues. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Standard triage labels (e.g., `needs-triage`, `ready-for-agent`). See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context layout. See `docs/agents/domain.md`.
+
