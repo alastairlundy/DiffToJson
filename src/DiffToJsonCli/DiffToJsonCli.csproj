@@ -38,12 +38,12 @@ This can be useful for preparing git commit diffs and message data for training 
   </PropertyGroup>
   
   <ItemGroup>
-    <PackageReference Include="Anthropic" Version="12.23.0" />
-    <PackageReference Include="CliInvoke.Extensions" Version="2.7.0" />
-    <PackageReference Include="Microsoft.Extensions.AI.OpenAI" Version="10.6.0" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.8" />
-    <PackageReference Include="OllamaSharp" Version="5.4.25" />
-    <PackageReference Include="System.CommandLine" Version="2.0.8" />
+    <PackageReference Include="Anthropic" />
+    <PackageReference Include="CliInvoke.Extensions" />
+    <PackageReference Include="Microsoft.Extensions.AI.OpenAI" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <PackageReference Include="OllamaSharp" />
+    <PackageReference Include="System.CommandLine" />
   </ItemGroup>
 
   <PropertyGroup Condition="'$(PublishAot)'=='true'">
