@@ -27,9 +27,15 @@
 This can be useful for preparing git commit diffs and message data for training AI/ML models or similar use cases.</Description>
     <Copyright>Copyright (c) Alastair Lundy 2026</Copyright>
     <PackageTags>git, diff, commit, JSONL, JSON</PackageTags>
-    <PackageReleaseNotes>Fixed an issue where the package uploaded to NuGet was not marked as a .NET tool</PackageReleaseNotes>
-    <Version>0.2.0</Version>
-    <AssemblyVersion>0.2.0.0</AssemblyVersion>
+    <PackageReleaseNotes>- ⚙️ Converted project to NuGet Central Package Management (CPM).
+- ⚙️ Updated dependencies:
+    - Anthropic: 12.23.0 → 12.29.0
+    - CliInvoke.Extensions: 2.7.0 → 2.8.1
+    - Microsoft.Extensions.AI.OpenAI: 10.6.0 → 10.7.0
+    - Microsoft.Extensions.DependencyInjection: 10.0.8 → 10.0.9
+    - System.CommandLine: 2.0.8 → 2.0.9</PackageReleaseNotes>
+    <Version>0.3.0</Version>
+    <AssemblyVersion>0.3.0.0</AssemblyVersion>
   </PropertyGroup>
 
   <PropertyGroup>

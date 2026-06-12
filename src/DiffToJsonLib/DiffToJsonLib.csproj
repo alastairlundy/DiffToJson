@@ -13,8 +13,12 @@
         <Copyright>Copyright (c) Alastair Lundy 2026</Copyright>
         <RepositoryUrl>https://github.com/alastairlundy/difftojson</RepositoryUrl>
         <RepositoryType>git</RepositoryType>
-        <PackageReleaseNotes>Initial Release</PackageReleaseNotes>
+        <PackageReleaseNotes>- ⚙️ Converted project to NuGet Central Package Management (CPM).
+- ⚙️ Updated dependencies:
+    - CliInvoke.Core: 2.7.0 → 2.8.1
+    - Microsoft.Extensions.AI.Abstractions: 10.6.0 → 10.7.0</PackageReleaseNotes>
         <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
+        <Version>0.3.0</Version>
     </PropertyGroup>
 
     <ItemGroup>
