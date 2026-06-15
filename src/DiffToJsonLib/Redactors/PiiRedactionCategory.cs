@@ -1,4 +1,4 @@
-﻿/*
+/*
     Copyright 2026 Alastair Lundy
 
    Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,9 +14,11 @@
    limitations under the License.
  */
 
-namespace DiffToJsonLib.Abstractions;
+using Microsoft.Extensions.Compliance.Classification;
 
-public interface IPiiRedactor
+namespace DiffToJsonLib.Redactors;
+
+public static class PiiRedactionCategory
 {
-    public string RedactPii(string input);
+    public static readonly DataClassification Value = new("Pii", "Pii");
 }

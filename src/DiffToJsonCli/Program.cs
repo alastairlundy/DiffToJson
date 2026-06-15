@@ -18,11 +18,16 @@ using System.CommandLine;
 using CliInvoke;
 using CliInvoke.Core;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Compliance.Redaction;
+using DiffToJsonLib.Redactors;
 
 IServiceCollection services = new  ServiceCollection();
 
 services.AddSingleton<IProcessInvoker, ProcessInvoker>();
-services.AddSingleton<IPiiRedactor, RegexPiiRedactor>();
+services.AddRedaction(redaction =>
+{
+    redaction.SetFallbackRedactor<RegexPiiRedactor>();
+});
 
 services.AddSingleton<IDiffJsonFileWriter, DiffJsonFileWriter>();
 services.AddSingleton<IGitCommitParser, GitCommitParser>();

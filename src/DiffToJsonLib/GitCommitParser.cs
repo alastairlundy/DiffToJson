@@ -16,18 +16,21 @@
 
 using System.Runtime.CompilerServices;
 using CliInvoke.Core;
+using Microsoft.Extensions.Compliance.Redaction;
+using Microsoft.Extensions.Compliance.Classification;
+using DiffToJsonLib.Redactors;
 
 namespace DiffToJsonLib;
 
 public class GitCommitParser : IGitCommitParser
 {
-    private readonly IPiiRedactor _piiRedactor;
+    private readonly IRedactorProvider _redactorProvider;
     private readonly IProcessInvoker _processInvoker;
 
-    public GitCommitParser(IPiiRedactor piiRedactor, 
+    public GitCommitParser(IRedactorProvider redactorProvider, 
         IProcessInvoker processInvoker)
     {
-        _piiRedactor = piiRedactor;
+        _redactorProvider = redactorProvider;
         _processInvoker = processInvoker;
     }
 
@@ -69,7 +72,7 @@ public class GitCommitParser : IGitCommitParser
                 {
                     yield return new CommitRecord(
                         diffBuilder.ToString().TrimStart().TrimEnd(),
-                        _piiRedactor.RedactPii(messageBuilder.ToString().TrimStart().TrimEnd()),
+                        _redactorProvider.GetRedactor(new DataClassificationSet(PiiRedactionCategory.Value)).Redact(messageBuilder.ToString().TrimStart().TrimEnd()),
                         RepoName: repoName,
                         License: license,
                         RepoUrl: repoUrl
@@ -117,7 +120,7 @@ public class GitCommitParser : IGitCommitParser
         { 
             yield return new CommitRecord(
                 diffBuilder.ToString().TrimStart().TrimEnd(),
-                _piiRedactor.RedactPii(messageBuilder.ToString().TrimStart().TrimEnd()),
+                _redactorProvider.GetRedactor(new DataClassificationSet(PiiRedactionCategory.Value)).Redact(messageBuilder.ToString().TrimStart().TrimEnd()),
                 RepoName: repoName,
                 License: license,
                 RepoUrl: repoUrl
