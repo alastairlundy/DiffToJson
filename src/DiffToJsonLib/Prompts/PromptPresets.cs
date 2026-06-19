@@ -27,16 +27,16 @@ public static partial class PromptPresets
     /// A style-neutral preset suitable for general commit-message generation.
     /// </summary>
     public static readonly PromptTemplate Default = new(
-        "You are a software engineer. Write a commit message for the following diff.",
-        "Write a commit message for the diff in the repository '{repoName}' ({license}, {repoUrl}):\n\n{diff}"
+        "You are a software engineer. You write high-quality commit messages that follow best practices.",
+        "Write a commit message for the diff in the repository '{repoName}': " + Environment.NewLine + "{diff}"
     );
 
     /// <summary>
     /// A preset that instructs the model to follow the Conventional Commits specification.
     /// </summary>
     public static readonly PromptTemplate Conventional = new(
-        "You are a software engineer. Write a commit message following the Conventional Commits specification.",
-        "Write a Conventional Commits-style commit message for the diff in '{repoName}' ({license}, {repoUrl}):\n\n{diff}"
+        "You are a software engineer. You write commit messages that follow the Conventional Commits specification.",
+        "Write a Conventional Commits-style commit message for the diff in '{repoName}': " + Environment.NewLine + "{diff}"
     );
 
     private static readonly Dictionary<string, PromptTemplate> _presets = new(StringComparer.OrdinalIgnoreCase)
@@ -49,9 +49,7 @@ public static partial class PromptPresets
     {
         "diff",
         "commitMessage",
-        "repoName",
-        "license",
-        "repoUrl",
+        "repoName"
     };
 
     static PromptPresets()
