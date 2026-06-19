@@ -15,9 +15,8 @@
  */
 
 using Microsoft.Extensions.AI;
-using DiffToJsonLib.Redactors;
 
-namespace DiffToJsonLib;
+namespace DiffToJsonLib.Writers;
 
 public class LlmAssistantWriter
 {

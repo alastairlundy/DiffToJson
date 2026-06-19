@@ -16,7 +16,7 @@
 
 using System.Text.Json;
 
-namespace DiffToJsonLib;
+namespace DiffToJsonLib.Writers;
 
 public class DiffJsonFileWriter : IDiffJsonFileWriter
 {
