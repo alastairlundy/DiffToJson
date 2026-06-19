@@ -12,13 +12,45 @@ This can be useful for preparing git commit diffs and message data for training 
 
 **NOTE**: Whilst the CLI implements a Regex pattern matching based PII detector for detecting email addresses in Commit Messages and redacting them, redaction of email addresses is not guaranteed. If commit messages contain sensitive information, conduct a human review of the output .JSONL file.
 
-## Documented Information
-The following is provided in output .JSONL files:
+## Output Formats
+
+Two output formats are available, selected via `--format`:
+
+- **`raw`** (legacy): PascalCase JSONL with flat fields — `Diff`, `CommitMessage`, `RepoName`, `License`, `RepoUrl`.
+- **`training`** (default): camelCase JSONL shaped for LLM post-training pipelines. Each record is a Training Example with a ChatML `messages` array, `provenance`, `legal`, and optionally `originalAssistantMessage`. See [Training Example Output](#training-example-output) below.
+
+### Documented Information (raw format)
 * The Git Diff
 * The Git Commit Message associated with the diff
-* The license Name if a LICENSE.txt, LICENSE.md, or LICENSE.txt file is present in the repo directory – An LLM call is required to compute this. As a fallback "Unknown" is returned otherwise.
-* The Git project name – Obtained from the Git Repo Directory name
+* The license Name if a LICENSE.txt, LICENSE.md, or LICENSE.txt file is present in the repo directory — An LLM call is required to compute this. As a fallback "Unknown" is returned otherwise.
+* The Git project name — Obtained from the Git Repo Directory name
 * The Git Repo URL if provided by the CLI caller.
+
+### Training Example Output
+
+When `--format training` (default), each line of the JSONL file is a single Training Example in camelCase:
+
+```json
+{
+  "messages": [
+    {"role": "system", "content": "You are a software engineer. Write a commit message for the following diff."},
+    {"role": "user", "content": "Write a commit message for the diff in the repository 'my-repo' (MIT, https://github.com/example/my-repo):\n\n<diff text>"},
+    {"role": "assistant", "content": "<commit message or LLM-generated response>"}
+  ],
+  "provenance": {"repoName": "my-repo", "repoUrl": "https://github.com/example/my-repo"},
+  "legal": {"license": "MIT"},
+  "originalAssistantMessage": "<human-written message, present only with --llm-assistant-output>"
+}
+```
+
+| Field | Description |
+|:---|:---|
+| `messages` | Array of exactly 3 ChatML messages: system, user, assistant. |
+| `provenance` | Source repository name and URL. Present on every record. |
+| `legal` | License identifier for the record's source code. Present on every record. |
+| `originalAssistantMessage` | The original commit message preserved alongside an LLM-generated assistant message. Present **only** when `--llm-assistant-output` is enabled; absent otherwise. |
+
+See [CONTEXT.md](./CONTEXT.md) for canonical definitions of Training Example, Provenance, Legal Metadata, and Original Assistant Message.
 
 ## Configuration & Requirements
 
@@ -103,31 +135,118 @@ diff-to-json --repo-directory "C:\path\to\your\repo" --model-id "gemma4:31b-clou
 
 This will analyse the specified repository and create a file named `{repo-name}-commits.jsonl` inside the specified output folder.
 
+### Training Format with Conventional Commits Preset
+
+```bash
+diff-to-json --repo-directory "C:\path\to\your\repo" --format training --prompt-style conventional -o "C:\output\folder"
+```
+
+### With LLM-Generated Assistant Messages
+
+```bash
+diff-to-json --repo-directory "C:\path\to\your\repo" --format training --llm-assistant-output --model-id "qwen3.5:4b" --endpoint-url "http://localhost:11434" --provider "ollama" -o "C:\output\folder"
+```
+
+### Using Custom Prompt Overrides
+
+```bash
+diff-to-json --repo-directory "C:\path\to\your\repo" --format training --system-prompt "You are an expert Git user." --user-prompt "Summarize this diff for {repoName}: {diff}" -o "C:\output\folder"
+```
+
+### Raw (Legacy) Format
+
+```bash
+diff-to-json --repo-directory "C:\path\to\your\repo" --format raw -o "C:\output\folder"
+```
+
 ## CLI Parameters
 
-| Parameter Name         | Type            | Optional/Required | Default Value             | Notes                                                                                   |
-|:-----------------------|:----------------|:------------------|:--------------------------|:----------------------------------------------------------------------------------------|
-| `--repo-directory`     | `DirectoryInfo` | Optional          | Current Working Directory | The local git repository directory to analyze.                                          |
-| `--repo-url`           | `string`        | Optional          | None                      | The URL of the git repository to be included in the JSONL output.                       |
-| `--model-id`           | `string`        | Conditional       | None                      | Required if `--license` is not provided. The ID of the AI model to use.                 |
-| `--endpoint-url`       | `string`        | Optional       | None                      | Required if `--license` is not provided, or if the API provider is not ``openai``, ``ollama-cloud``, or ``anthropic``. The endpoint URL of the API. |
-| `--api-key`            | `string`        | Optional          | None                      | The API key for the AI provider.                                                        |
-| `--provider`           | `string`        | Optional          | OpenAI Compatible         | The AI provider ID (e.g., `ollama`).                                                    |
-| `--license`            | `string`        | Optional          | None                      | Manually specify the license name. If provided, LLM license detection is skipped.       |
-| `--output-file` / `-o` | `string`        | Optional          | Repo Directory            | The  path where the output file will be saved.                                 |
+| Parameter Name | Type | Optional/Required | Default | Notes |
+|:---|:---|:---|:---|:---|
+| `--repo-directory` | `DirectoryInfo` | Optional | Current directory | The local git repository directory to analyze. |
+| `--repo-url` | `string` | Optional | `""` | The URL of the git repository to include in the JSONL output. |
+| `--model-id` | `string` | Conditional | `""` | Required if `--license` is not provided. The ID of the AI model to use. |
+| `--endpoint-url` | `string` | Optional | `""` | Required if `--license` is not provided, or if the provider is not `openai`, `ollama-cloud`, or `anthropic`. The endpoint URL of the API. |
+| `--api-key` | `string` | Optional | `""` | The API key for the AI provider. |
+| `--provider` | `string` | Optional | `""` | The AI provider ID. See [LLM Setup](#llm-setup-for-license-detection). |
+| `--license` | `string` | Optional | `""` | Manually specify the license name. Skips LLM license detection. |
+| `--output-file` / `-o` | `string` | Optional | `{repoDir}/{repoName}-commits.jsonl` | The output file path. |
+| `--format` | `string` | Optional | `training` | Output format. `training` for camelCase ChatML JSONL; `raw` for legacy PascalCase JSONL. |
+| `--prompt-style` | `string` | Optional | `default` | Prompt preset name. See [Prompt Presets](#prompt-presets). |
+| `--system-prompt` | `string` | Optional | `""` (uses preset) | Override the system prompt template. Supports [placeholders](#placeholders). |
+| `--user-prompt` | `string` | Optional | `""` (uses preset) | Override the user prompt template. Supports [placeholders](#placeholders). |
+| `--llm-assistant-output` | `bool` | Optional | `false` | Enable LLM-generated assistant messages. Requires `--format training`. See [LLM Override](#llm-override). |
+| `--llm-override-prompt` | `string` | Optional | `""` (uses user prompt) | Override the prompt sent to the LLM when `--llm-assistant-output` is enabled. Supports [placeholders](#placeholders). Requires `--llm-assistant-output`. |
+| `--redaction` | `string` | Optional | `message` | PII redaction tier. See [Redaction Tiers](#redaction-tiers). |
+
+## Cross-Option Rules
+
+The following validators enforce constraints between flags:
+
+| Condition | Outcome | Message |
+|:---|:---|:---|
+| `--llm-assistant-output` + `--format raw` | **Error** — incompatible | `Error: --llm-assistant-output is not compatible with --format raw.` |
+| `--llm-override-prompt` set without `--llm-assistant-output` | **Error** — override prompt requires override enabled | `Error: --llm-override-prompt requires --llm-assistant-output.` |
+| `--redaction none` + `--llm-assistant-output` | **Warning** — proceeds but may expose PII in LLM output | `Warning: --redaction none combined with --llm-assistant-output may expose PII in LLM output.` |
+
+Unknown placeholders in `--system-prompt`, `--user-prompt`, or `--llm-override-prompt` also cause an error before any records are written.
+
+## Prompt Presets
+
+Available via `--prompt-style`. Each preset provides a system and user message template. Placeholders (see below) are substituted at serialization time.
+
+| Preset Name | System Prompt | User Prompt |
+|:---|:---|:---|
+| `default` | `You are a software engineer. Write a commit message for the following diff.` | `Write a commit message for the diff in the repository '{repoName}' ({license}, {repoUrl}):\n\n{diff}` |
+| `conventional` | `You are a software engineer. Write a commit message following the Conventional Commits specification.` | `Write a Conventional Commits-style commit message for the diff in '{repoName}' ({license}, {repoUrl}):\n\n{diff}` |
+
+Overrides take precedence over the selected preset: provide `--system-prompt` or `--user-prompt` to replace the respective message entirely.
+
+### Placeholders
+
+Placeholder tokens in prompt templates are replaced with record-specific data at serialization time. Unknown placeholders cause a CLI error.
+
+| Placeholder | Substituted With |
+|:---|:---|
+| `{diff}` | The git diff content |
+| `{commitMessage}` | The commit message |
+| `{repoName}` | The repository name (directory name) |
+| `{license}` | The detected or manually specified license |
+| `{repoUrl}` | The repository URL from `--repo-url` |
+
+## Redaction Tiers
+
+Available via `--redaction`. Controls which fields are passed through the PII redactor (regex-based email redaction) before emission.
+
+| Tier | CLI Value | Commit Message | Diff | LLM Output |
+|:---|:---|:---:|:---:|:---:|
+| None | `none` | — | — | — |
+| Message (default) | `message` | Redacted | — | — |
+| Diff | `diff` | Redacted | Redacted | — |
+| All | `all` | Redacted | Redacted | Redacted |
+
+## LLM Override
+
+When `--llm-assistant-output` is enabled, the assistant message of each Training Example is generated by an LLM at extraction time, rather than taken from the original commit message. The original message is preserved in `originalAssistantMessage` for downstream evaluation.
+
+- Requires `--format training` (see [Cross-Option Rules](#cross-option-rules)).
+- Requires AI provider configuration (`--provider`, `--model-id`, `--endpoint-url`, `--api-key`).
+- Use `--llm-override-prompt` to send a different prompt to the LLM than what appears in the user message.
+- On persistent LLM failure, the record is emitted with `assistant.content = null` and `originalAssistantMessage` populated.
+- When `--redaction all` is set, the LLM output is also redacted after generation.
 
 ## How to Build
 
 ### Standard Build
 Build the project using the .NET CLI:
 ```bash
-dotnet build src/GitDiffToJsonCli/GitDiffToJsonCli.csproj
+dotnet build src/DiffToJsonCli/DiffToJsonCli.csproj
 ```
 
 ### Running the Tool
 You can run the tool directly from the source:
 ```bash
-dotnet run --project src/GitDiffToJsonCli/GitDiffToJsonCli.csproj -- [args]
+dotnet run --project src/DiffToJsonCli/DiffToJsonCli.csproj -- [args]
 ```
 
 ### Publishing (Native AOT)
@@ -154,9 +273,7 @@ These are some things I'd like to work towards in future versions but are not gu
 
 In no particular order:
 * AWS Bedrock support
-* Support for specifying the name of the output file
 * Support for working with ``Microsoft.Extensions.Compliance.Redaction`` to enable support for different implementations and types of PII redaction.
-* Support for disabling PII redaction
 
 ## Star History
 
