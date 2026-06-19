@@ -22,9 +22,12 @@
     </PropertyGroup>
 
     <ItemGroup>
+      <PackageReference Include="Anthropic" />
       <PackageReference Include="CliInvoke.Core"/>
       <PackageReference Include="Microsoft.Extensions.AI.Abstractions"/>
+      <PackageReference Include="Microsoft.Extensions.AI.OpenAI" />
       <PackageReference Include="Microsoft.Extensions.Compliance.Redaction"/>
+      <PackageReference Include="OllamaSharp" />
     </ItemGroup>
 
 </Project>

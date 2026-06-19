@@ -142,10 +142,10 @@ rootCommand.SetAction(async result =>
         {
             ArgumentException.ThrowIfNullOrEmpty(endpointUrl);
             ArgumentException.ThrowIfNullOrEmpty(modelId);
-            
-            IChatClient chatClient = ChatClientCreator.CreateClient(provider, apiKey, endpointUrl, modelId);
 
-            services.AddSingleton<ILicenseAnalyzer>(sp => new AILicenseAnalyzer(chatClient));
+            services.AddSingleton<IChatClientFactory>(sp =>
+                new ChatClientFactory(provider, apiKey, endpointUrl, modelId));
+            services.AddSingleton<ILicenseAnalyzer, AILicenseAnalyzer>();
             serviceProvider = services.BuildServiceProvider();
             
             ILicenseAnalyzer licenseAnalyzer = serviceProvider.GetRequiredService<ILicenseAnalyzer>();

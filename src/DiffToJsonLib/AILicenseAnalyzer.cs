@@ -22,9 +22,9 @@ public class AILicenseAnalyzer : ILicenseAnalyzer
 {
     private readonly IChatClient _client;
 
-    public AILicenseAnalyzer(IChatClient chatClient)
+    public AILicenseAnalyzer(IChatClientFactory chatClientFactory)
     {
-        _client = chatClient;
+        _client = chatClientFactory.Create();
     }
 
     /// <summary>

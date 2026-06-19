@@ -1,4 +1,4 @@
-﻿/*
+/*
     Copyright 2026 Alastair Lundy
 
    Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,12 +17,11 @@
 using System.Text.Json.Serialization;
 using OllamaSharp.Models.Chat;
 
-namespace DiffToJsonCli.Contexts;
+namespace DiffToJsonLib.Contexts;
 
 [JsonSerializable(typeof(ChatRequest))]
 [JsonSerializable(typeof(ChatResponseStream))]
 [JsonSerializable(typeof(ChatDoneResponseStream))]
-public partial class CustomOllamaJsonContext : JsonSerializerContext
+public partial class OllamaJsonContext : JsonSerializerContext
 {
-    
 }
