@@ -16,7 +16,7 @@
 
 namespace DiffToJsonLib.Models;
 
-public record Message(string Role, string Content);
+public record Message(string Role, string? Content);
 
 public record Provenance(string RepoName, string RepoUrl);
 
