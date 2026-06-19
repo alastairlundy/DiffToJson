@@ -3,7 +3,7 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="Anthropic" Version="12.29.0" />
+    <PackageVersion Include="Anthropic" Version="12.29.1" />
     <PackageVersion Include="CliInvoke.Core" Version="2.8.2" />
     <PackageVersion Include="CliInvoke.Extensions" Version="2.8.2" />
     <PackageVersion Include="Microsoft.Extensions.AI.Abstractions" Version="10.7.0" />
