@@ -265,6 +265,10 @@ For sensitive git email addresses, always conduct a human review.
 ### License Detection Logic
 The tool automatically discovers license information by searching for `LICENSE.md`, `LICENSE.txt`, or `LICENSE` files in the repository root. If found, the content is sent to a configured LLM (via `OllamaSharp` or `Microsoft.Extensions.AI.OpenAI`) to extract the license name. If no file is found or the LLM cannot determine the license, it falls back to "Unknown".
 
+### Merge Commits
+
+Merge commits are omitted from the output. The tool retrieves diffs via `git log -p`, which by default produces no diff output for merge commits. The parser skips any commit with an empty diff body, so merge commits are excluded regardless of format.
+
 ### Native AOT Compatibility
 The application is designed for Native AOT compatibility, ensuring fast startup times and a small deployment footprint.
 
