@@ -23,4 +23,8 @@ public interface IGitCommitParser
     
     IAsyncEnumerable<CommitRecord> ParseCommitsStreamAsync(string repoName, string license,
         string workingDir, string repoUrl, CancellationToken cancellationToken);
+    
+    IAsyncEnumerable<CommitTrainingRecord> ParseCommitsToTrainingStreamAsync(string repoName, string license,
+        string workingDir, string repoUrl, string presetName, RedactionTier redactionTier,
+        CancellationToken cancellationToken);
 }
