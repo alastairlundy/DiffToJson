@@ -18,19 +18,28 @@ namespace DiffToJsonCli.Helpers;
 
 internal class LicenseFileFinder
 {
-    internal static async Task<FileInfo?> FindLicenseFile(string workingDir)
+    internal static Task<FileInfo?> FindLicenseFile(string workingDir)
     {
-        string[] priorityFiles = ["LICENSE.md", "LICENSE.txt", "LICENSE"];
-        
-        foreach (string fileName in priorityFiles)
+        try
         {
-            string path = Path.Combine(workingDir, fileName);
-            if (File.Exists(path))
+            string[] priorityFiles = ["LICENSE.md", "LICENSE.txt", "LICENSE"];
+        
+            foreach (string fileName in priorityFiles)
             {
-                return new FileInfo(path);
+                string path = Path.Combine(workingDir, fileName);
+                if (File.Exists(path))
+                {
+                    FileInfo fileInfo = new(path);
+                    
+                    return Task.FromResult((FileInfo?)fileInfo);
+                }
             }
-        }
 
-        return null;
+            return Task.FromResult<FileInfo?>(null);
+        }
+        catch (Exception exception)
+        {
+            return Task.FromException<FileInfo?>(exception);
+        }
     }
 }
