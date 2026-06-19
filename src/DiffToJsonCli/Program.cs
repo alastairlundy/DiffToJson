@@ -17,8 +17,7 @@
 using System.CommandLine;
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
-using CliInvoke;
-using CliInvoke.Core;
+using CliInvoke.Extensions;
 using DiffToJsonLib.Prompts;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Compliance.Redaction;
@@ -61,7 +60,7 @@ static string SubstitutePlaceholders(string text, string diff, string commitMess
 
 IServiceCollection services = new ServiceCollection();
 
-services.AddSingleton<IProcessInvoker, ProcessInvoker>();
+services.AddCliInvoke();
 services.AddRedaction(redaction =>
 {
     redaction.SetFallbackRedactor<RegexPiiRedactor>();
