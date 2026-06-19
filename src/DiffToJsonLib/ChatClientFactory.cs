@@ -30,7 +30,7 @@ public class ChatClientFactory : IChatClientFactory
     private readonly string _endpoint;
     private readonly string _model;
     private IChatClient? _cachedClient;
-    private readonly object _lock = new();
+    private readonly Lock _lock = new();
 
     public ChatClientFactory(string provider, string apiKey, string endpoint, string model)
     {
@@ -109,6 +109,7 @@ public class ChatClientFactory : IChatClientFactory
                     .GetChatClient(_model)
                     .AsIChatClient();
             }
+            // ReSharper disable once RedundantCaseLabel
             case "openai-compatible":
             default:
             {
