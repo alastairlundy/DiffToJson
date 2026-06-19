@@ -20,7 +20,6 @@ using System.Text.RegularExpressions;
 using CliInvoke.Extensions;
 using DiffToJsonLib.Prompts;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Compliance.Redaction;
 using DiffToJsonLib.Redactors;
 
 HashSet<string> knownPlaceholders = new(StringComparer.OrdinalIgnoreCase)

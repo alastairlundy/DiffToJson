@@ -17,7 +17,6 @@
 using System.ClientModel;
 using Anthropic;
 using Anthropic.Core;
-using DiffToJsonLib.Contexts;
 using Microsoft.Extensions.AI;
 using OllamaSharp;
 using OpenAI;

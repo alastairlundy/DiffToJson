@@ -19,7 +19,6 @@ using CliInvoke.Core;
 using Microsoft.Extensions.Compliance.Redaction;
 using Microsoft.Extensions.Compliance.Classification;
 using DiffToJsonLib.Prompts;
-using DiffToJsonLib.Redactors;
 
 namespace DiffToJsonLib;
 
