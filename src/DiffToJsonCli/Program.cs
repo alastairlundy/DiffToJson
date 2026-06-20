@@ -118,7 +118,7 @@ Option<string> licenseOption = new("--license")
     DefaultValueFactory = _ => ""
 };
 
-Option<string> outputFilePathOption = new("--output-file", ["-o"])
+Option<string> outputFilePathOption = new("--output", ["-o"])
 {
     Description = "The output file path. If not specified, the default is the repository directory path.",
     Required = false,

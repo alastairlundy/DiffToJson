@@ -166,11 +166,11 @@ diff-to-json --repo-directory "C:\path\to\your\repo" --format raw -o "C:\output\
 | `--repo-directory` | `DirectoryInfo` | Optional | Current directory | The local git repository directory to analyze. |
 | `--repo-url` | `string` | Optional | `""` | The URL of the git repository to include in the JSONL output. |
 | `--model-id` | `string` | Conditional | `""` | Required if `--license` is not provided. The ID of the AI model to use. |
-| `--endpoint-url` | `string` | Optional | `""` | Required if `--license` is not provided, or if the provider is not `openai`, `ollama-cloud`, or `anthropic`. The endpoint URL of the API. |
+| ``--endpoint-url`` | `string` | Optional | `""` | Required if `--license` is not provided, or if the provider is not `openai`, `ollama-cloud`, or `anthropic`. The endpoint URL of the API. |
 | `--api-key` | `string` | Optional | `""` | The API key for the AI provider. |
 | `--provider` | `string` | Optional | `""` | The AI provider ID. See [LLM Setup](#llm-setup-for-license-detection). |
 | `--license` | `string` | Optional | `""` | Manually specify the license name. Skips LLM license detection. |
-| `--output-file` / `-o` | `string` | Optional | `{repoDir}/{repoName}-commits.jsonl` | The output file path. |
+| `--output` / `-o` | `string` | Optional | `{repoDir}/{repoName}-commits.jsonl` | The output file path. |
 | `--format` | `string` | Optional | `training` | Output format. `training` for camelCase ChatML JSONL; `raw` for legacy PascalCase JSONL. |
 | `--prompt-style` | `string` | Optional | `default` | Prompt preset name. See [Prompt Presets](#prompt-presets). |
 | `--system-prompt` | `string` | Optional | `""` (uses preset) | Override the system prompt template. Supports [placeholders](#placeholders). |
