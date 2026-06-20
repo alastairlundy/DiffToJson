@@ -27,15 +27,23 @@
 This can be useful for preparing git commit diffs and message data for training AI/ML models or similar use cases.</Description>
     <Copyright>Copyright (c) Alastair Lundy 2026</Copyright>
     <PackageTags>git, diff, commit, JSONL, JSON</PackageTags>
-    <PackageReleaseNotes>- ⚙️ Converted project to NuGet Central Package Management (CPM).
-- ⚙️ Updated dependencies:
-    - Anthropic: 12.23.0 → 12.29.0
-    - CliInvoke.Extensions: 2.7.0 → 2.8.1
-    - Microsoft.Extensions.AI.OpenAI: 10.6.0 → 10.7.0
-    - Microsoft.Extensions.DependencyInjection: 10.0.8 → 10.0.9
-    - System.CommandLine: 2.0.8 → 2.0.9</PackageReleaseNotes>
-    <Version>0.3.0</Version>
-    <AssemblyVersion>0.3.0.0</AssemblyVersion>
+    <PackageReleaseNotes>
+#### Additions
+- Wired CLI flags, format selection, validators, and dependency injection into `Program.cs`.
+- Added the ability to output Commit Message data as ChatML formatt JSONL files for easier usage with LLMs
+- Added the ability to disable PII Redaction or increase the level of PII Redaction to output messages + input diffs
+
+#### Modifications
+- Renamed the output file option from `--output-file` to `--output`.
+- Refactored `LicenseFileFinder.FindLicenseFile` to a non-async method with try/catch.
+- Updated `Program.cs` imports to use `DiffToJsonLib.Writers` instead of `DiffToJsonLib.Redactors`.
+- Updated to `CliInvoke` 2.8.2 using the `CliInvoke.Extensions` package and the `AddCliInvoke` DI extension, fixing a related `CliInvoke` issue.
+- Switched PII redaction to implement`Microsoft.Extensions.Compliance.Redaction`'s ``Redactor`` abstraction  .
+
+#### Removals
+- Removed the `ChatClientCreator` helper and `CustomOllamaJsonContext` (now provided by the library as `IChatClientFactory`, `ChatClientFactory`, and `OllamaJsonContext`).</PackageReleaseNotes>
+    <Version>0.4.0</Version>
+    <AssemblyVersion>0.4.0.0</AssemblyVersion>
   </PropertyGroup>
 
   <PropertyGroup>
