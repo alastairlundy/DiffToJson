@@ -22,6 +22,7 @@ using DiffToJsonLib.Prompts;
 using Microsoft.Extensions.DependencyInjection;
 using DiffToJsonLib.Reasoning;
 using DiffToJsonLib.Writers;
+using ReasoningEffort = DiffToJsonLib.Reasoning.ReasoningEffort;
 
 HashSet<string> knownPlaceholders = new(StringComparer.OrdinalIgnoreCase)
 {
@@ -49,6 +50,16 @@ string? ValidatePlaceholders(string value)
 
 static string GetReasoningEffortHelpText(string provider, string modelId)
 {
+    if (!string.IsNullOrEmpty(provider) && !string.IsNullOrEmpty(modelId))
+    {
+        var matrix = new ReasoningEffortMatrix();
+        IReadOnlySet<ReasoningEffort> validSet = matrix.GetSupportedReasoningValues(modelId);
+        if (validSet.Count > 0)
+        {
+            return string.Join(", ", validSet.Select(v => v.ToString().ToLowerInvariant()));
+        }
+    }
+
     return "auto, on, off, low, medium, high, xhigh, max";
 }
 
