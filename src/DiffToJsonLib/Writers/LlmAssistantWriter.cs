@@ -15,6 +15,8 @@
  */
 
 using Microsoft.Extensions.AI;
+using Polly;
+using Polly.Retry;
 
 namespace DiffToJsonLib.Writers;
 
@@ -22,11 +24,21 @@ public class LlmAssistantWriter
 {
     private readonly Lazy<IChatClient> _clientLazy;
     private readonly RedactionTier _tier;
+    private readonly ResiliencePipeline _pipeline;
 
     public LlmAssistantWriter(IChatClientFactory chatClientFactory, RedactionTier tier)
     {
         _clientLazy = new Lazy<IChatClient>(chatClientFactory.Create);
         _tier = tier;
+        _pipeline = new ResiliencePipelineBuilder()
+            .AddRetry(new RetryStrategyOptions
+            {
+                MaxRetryAttempts = 2,
+                Delay = TimeSpan.FromSeconds(1),
+                BackoffType = DelayBackoffType.Exponential,
+                UseJitter = false
+            })
+            .Build();
     }
 
     public async Task<string?> GenerateAssistantAsync(
@@ -39,51 +51,27 @@ public class LlmAssistantWriter
     {
         IChatClient client = _clientLazy.Value;
 
-        const int maxRetries = 3;
-        int delayMs = 1000;
+        ChatMessage system = new(ChatRole.System, systemPrompt);
+        ChatMessage user = new(ChatRole.User, userPrompt);
 
-        for (int attempt = 0; attempt < maxRetries; attempt++)
+        ChatResponse? response = await _pipeline.ExecuteAsync(
+            async ct => await client.GetResponseAsync([system, user], cancellationToken: ct),
+            cancellationToken);
+
+        string? message = response.Messages
+            .FirstOrDefault(m => m.Role == ChatRole.Assistant)?.Text;
+
+        if (string.IsNullOrWhiteSpace(message))
+            return null;
+
+        string result = message.Trim();
+
+        if (_tier == RedactionTier.All)
         {
-            try
-            {
-                ChatMessage system = new(ChatRole.System, systemPrompt);
-                ChatMessage user = new(ChatRole.User, userPrompt);
-
-                ChatResponse response = await client.GetResponseAsync(
-                    [system, user],
-                    cancellationToken: cancellationToken);
-
-                string? message = response.Messages
-                    .FirstOrDefault(m => m.Role == ChatRole.Assistant)?.Text;
-
-                if (string.IsNullOrWhiteSpace(message))
-                {
-                    if (attempt == maxRetries - 1)
-                        return null;
-
-                    continue;
-                }
-
-                string result = message.Trim();
-
-                if (_tier == RedactionTier.All)
-                {
-                    var redactor = new RegexPiiRedactor();
-                    result = redactor.Redact(result);
-                }
-
-                return result;
-            }
-            catch
-            {
-                if (attempt == maxRetries - 1)
-                    return null;
-
-                await Task.Delay(delayMs, cancellationToken);
-                delayMs *= 2;
-            }
+            var redactor = new RegexPiiRedactor();
+            result = redactor.Redact(result);
         }
 
-        return null;
+        return result;
     }
 }
