@@ -1,4 +1,5 @@
 using Microsoft.Extensions.AI;
+using MeaiReasoningEffort = Microsoft.Extensions.AI.ReasoningEffort;
 
 namespace DiffToJsonLib.Reasoning;
 
@@ -122,56 +123,129 @@ public sealed class ChatOptionsBuilder : IChatOptionsBuilder
 
     private static void BuildOpenAiChatOptions(ChatOptions options, ReasoningEffort effort, string provider)
     {
-        throw new NotImplementedException();
+        MeaiReasoningEffort? meaiEffort = effort switch
+        {
+            ReasoningEffort.Auto => MeaiReasoningEffort.Low,
+            ReasoningEffort.On => MeaiReasoningEffort.Low,
+            ReasoningEffort.Off => null,
+            ReasoningEffort.Low => MeaiReasoningEffort.Low,
+            ReasoningEffort.Medium => MeaiReasoningEffort.Medium,
+            ReasoningEffort.High => MeaiReasoningEffort.High,
+            ReasoningEffort.XHigh => MeaiReasoningEffort.ExtraHigh,
+            ReasoningEffort.Max => MeaiReasoningEffort.ExtraHigh,
+            _ => null
+        };
+
+        if (meaiEffort.HasValue)
+        {
+            options.Reasoning = new ReasoningOptions { Effort = meaiEffort.Value };
+        }
     }
 
     private static void BuildOpenAiChatAdaptive(ChatOptions options, ReasoningEffort effort, string provider)
     {
-        throw new NotImplementedException();
     }
 
     private static void BuildAnthropicNewChatOptions(ChatOptions options, ReasoningEffort effort, string provider)
     {
-        throw new NotImplementedException();
+        string? value = effort switch
+        {
+            ReasoningEffort.Auto => null,
+            ReasoningEffort.On => null,
+            ReasoningEffort.Off => null,
+            ReasoningEffort.Low => "low",
+            ReasoningEffort.Medium => "medium",
+            ReasoningEffort.High => "high",
+            ReasoningEffort.XHigh => "xhigh",
+            ReasoningEffort.Max => "max",
+            _ => null
+        };
+
+        if (value is not null)
+        {
+            options.AdditionalProperties ??= new AdditionalPropertiesDictionary();
+            options.AdditionalProperties["reasoning_effort"] = value;
+        }
     }
 
     private static void BuildAnthropicOldChatOptions(ChatOptions options, ReasoningEffort effort, string provider)
     {
-        throw new NotImplementedException();
+        long? budgetTokens = null;
+
+        if (effort == ReasoningEffort.Off)
+        {
+            budgetTokens = 0;
+        }
+        else
+        {
+            long maxTokens = options.MaxOutputTokens ?? 8192;
+
+            double fraction = effort switch
+            {
+                ReasoningEffort.Auto => 0.50,
+                ReasoningEffort.On => 0.50,
+                ReasoningEffort.Low => 0.25,
+                ReasoningEffort.Medium => 0.50,
+                ReasoningEffort.High => 0.75,
+                _ => 0.50
+            };
+
+            budgetTokens = (long)Math.Floor(maxTokens * fraction);
+        }
+
+        options.AdditionalProperties ??= new AdditionalPropertiesDictionary();
+        options.AdditionalProperties["thinking"] = new Dictionary<string, object>
+        {
+            ["type"] = "enabled",
+            ["budget_tokens"] = budgetTokens
+        };
     }
 
     private static void BuildAnthropicCompatibleChatOptions(ChatOptions options, ReasoningEffort effort, string provider)
     {
-        throw new NotImplementedException();
     }
 
     private static void BuildQwen3ChatOptions(ChatOptions options, ReasoningEffort effort, string provider)
     {
-        throw new NotImplementedException();
+        bool enableThinking = effort switch
+        {
+            ReasoningEffort.Off => false,
+            _ => true
+        };
+
+        options.AdditionalProperties ??= new AdditionalPropertiesDictionary();
+        options.AdditionalProperties["chat_template_kwargs"] = new Dictionary<string, object>
+        {
+            ["enable_thinking"] = enableThinking
+        };
     }
 
     private static void BuildMiniMaxChatOptions(ChatOptions options, ReasoningEffort effort, string provider)
     {
-        throw new NotImplementedException();
     }
 
     private static void BuildDeepseekV3ChatOptions(ChatOptions options, ReasoningEffort effort, string provider)
     {
-        throw new NotImplementedException();
     }
 
     private static void BuildDeepseekV31ChatOptions(ChatOptions options, ReasoningEffort effort, string provider)
     {
-        throw new NotImplementedException();
+        if (effort == ReasoningEffort.Off)
+        {
+            options.Reasoning = null;
+        }
+        else
+        {
+            options.Reasoning = new ReasoningOptions { Effort = MeaiReasoningEffort.Low };
+        }
     }
 
     private static void BuildDeepseekV4ChatOptions(ChatOptions options, ReasoningEffort effort, string provider)
     {
-        throw new NotImplementedException();
+        BuildOpenAiChatOptions(options, effort, provider);
     }
 
     private static void ApplyNonCoTFallback(ChatOptions options, ReasoningEffort effort, string provider)
     {
-        throw new NotImplementedException();
     }
 }
