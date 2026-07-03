@@ -20,6 +20,7 @@ using System.Text.RegularExpressions;
 using CliInvoke.Extensions;
 using DiffToJsonLib.Prompts;
 using Microsoft.Extensions.DependencyInjection;
+using DiffToJsonLib.Reasoning;
 using DiffToJsonLib.Writers;
 
 HashSet<string> knownPlaceholders = new(StringComparer.OrdinalIgnoreCase)
@@ -44,6 +45,11 @@ string? ValidatePlaceholders(string value)
     }
 
     return null;
+}
+
+static string GetReasoningEffortHelpText(string provider, string modelId)
+{
+    return "auto, on, off, low, medium, high, xhigh, max";
 }
 
 static string SubstitutePlaceholders(string text, string diff, string commitMessage,
@@ -163,6 +169,13 @@ Option<string> llmOverridePromptOption = new("--llm-override-prompt")
     DefaultValueFactory = _ => ""
 };
 
+Option<string> reasoningEffortOption = new("--reasoning-effort")
+{
+    Description = "The reasoning effort level used by the AI model. Valid values: auto, on, off, low, medium, high, xhigh, max. Valid values depend on the active (provider, model).",
+    DefaultValueFactory = _ => "auto",
+    Required = false
+};
+
 Option<string> redactionOption = new("--redaction")
 {
     Description = "PII redaction tier for training records. 'none' disables redaction; 'message' redacts only commit messages; 'diff' redacts only diffs; 'all' redacts both.",
@@ -186,6 +199,7 @@ RootCommand rootCommand = new("Detects and Serializes Git Diffs and Commits to a
     userPromptOption,
     llmAssistantOutputOption,
     llmOverridePromptOption,
+    reasoningEffortOption,
     redactionOption
 };
 
