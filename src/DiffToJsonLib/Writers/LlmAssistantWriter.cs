@@ -56,13 +56,24 @@ public class LlmAssistantWriter
             async ct => await client.GetResponseAsync([system, user], chatOptions, ct),
             cancellationToken);
 
-        string? message = response.Messages
-            .FirstOrDefault(m => m.Role == ChatRole.Assistant)?.Text;
+        ChatMessage? assistantMessage = response.Messages
+            .FirstOrDefault(m => m.Role == ChatRole.Assistant);
 
-        if (string.IsNullOrWhiteSpace(message))
+        if (assistantMessage is null)
             return null;
 
-        string result = message.Trim();
+        List<string> reasoningItems = assistantMessage.Contents
+            .OfType<TextReasoningContent>()
+            .Select(r => r.Text)
+            .ToList();
+
+        string visibleText = assistantMessage.Text ?? "";
+
+        string composed = reasoningItems.Count > 0
+            ? $"<think>{string.Join("\n", reasoningItems)}</think>\n\n{visibleText}"
+            : visibleText;
+
+        string result = composed.Trim();
 
         if (_tier == RedactionTier.All)
         {
