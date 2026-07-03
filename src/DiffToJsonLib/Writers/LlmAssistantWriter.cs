@@ -44,9 +44,7 @@ public class LlmAssistantWriter
     public async Task<string?> GenerateAssistantAsync(
         string systemPrompt,
         string userPrompt,
-        string repoName,
-        string license,
-        string repoUrl,
+        ChatOptions chatOptions,
         CancellationToken cancellationToken = default)
     {
         IChatClient client = _clientLazy.Value;
@@ -55,7 +53,7 @@ public class LlmAssistantWriter
         ChatMessage user = new(ChatRole.User, userPrompt);
 
         ChatResponse? response = await _pipeline.ExecuteAsync(
-            async ct => await client.GetResponseAsync([system, user], cancellationToken: ct),
+            async ct => await client.GetResponseAsync([system, user], chatOptions, ct),
             cancellationToken);
 
         string? message = response.Messages

@@ -419,10 +419,13 @@ async IAsyncEnumerable<CommitTrainingRecord> BuildTrainingRecords(
                     commit.RepoName, license, commit.RepoUrl)
                 : userContent;
 
+            // Use a temporary ChatOptions for now (ticket 10 replaces this with DI)
+            var tempMatrix = new ReasoningEffortMatrix();
+            var tempBuilder = new ChatOptionsBuilder(tempMatrix);
+            ChatOptions tempOptions = tempBuilder.BuildChatOptions(DiffToJsonLib.Reasoning.ReasoningEffort.Auto, "", "");
+
             string? llmResult = await llmWriter.GenerateAssistantAsync(
-                systemContent, llmUserPrompt,
-                commit.RepoName, license, commit.RepoUrl,
-                cancellationToken);
+                systemContent, llmUserPrompt, tempOptions, cancellationToken);
 
             if (llmResult is not null)
             {
