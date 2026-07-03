@@ -85,6 +85,8 @@ services.AddRedaction(redaction =>
 services.AddSingleton<IDiffJsonFileWriter, DiffJsonFileWriter>();
 services.AddSingleton<IDiffTrainingJsonFileWriter, DiffTrainingJsonFileWriter>();
 services.AddSingleton<IGitCommitParser, GitCommitParser>();
+services.AddSingleton<IReasoningEffortMatrix, ReasoningEffortMatrix>();
+services.AddSingleton<IChatOptionsBuilder, ChatOptionsBuilder>();
 
 Option<DirectoryInfo> repoDirectoryOption = new("--repo-directory")
 {
@@ -252,6 +254,7 @@ rootCommand.SetAction(async result =>
         bool llmAssistantOutput = result.GetValue(llmAssistantOutputOption);
         string llmOverridePrompt = result.GetValue(llmOverridePromptOption) ?? "";
         string redactionStr = result.GetValue(redactionOption) ?? "message";
+        string reasoningEffortStr = result.GetValue(reasoningEffortOption) ?? "auto";
 
         if (llmAssistantOutput && format == "raw")
         {
@@ -299,6 +302,13 @@ rootCommand.SetAction(async result =>
             _ => RedactionTier.Message
         };
 
+        if (!string.IsNullOrEmpty(reasoningEffortStr) && !string.Equals(reasoningEffortStr, "auto", StringComparison.OrdinalIgnoreCase) && !llmAssistantOutput)
+        {
+            await Console.Error.WriteLineAsync("Error: --reasoning-effort requires --llm-assistant-output when set to a value other than 'auto'.");
+            Environment.Exit(1);
+            return;
+        }
+
         IServiceProvider serviceProvider;
 
         services.AddSingleton<IChatClientFactory>(_ =>
@@ -335,6 +345,39 @@ rootCommand.SetAction(async result =>
             await Console.Out.WriteLineAsync($"Using specified License: {license}");
         }
 
+        IReasoningEffortMatrix matrix = serviceProvider.GetRequiredService<IReasoningEffortMatrix>();
+        IChatOptionsBuilder chatOptionsBuilder = serviceProvider.GetRequiredService<IChatOptionsBuilder>();
+
+        if (llmAssistantOutput && !string.IsNullOrEmpty(reasoningEffortStr))
+        {
+            if (string.IsNullOrEmpty(modelId))
+            {
+                await Console.Error.WriteLineAsync("Error: --reasoning-effort requires --model-id when --llm-assistant-output is enabled.");
+                Environment.Exit(1);
+                return;
+            }
+
+            if (!Enum.TryParse<ReasoningEffort>(reasoningEffortStr, ignoreCase: true, out var reasoningEffort))
+            {
+                IReadOnlySet<ReasoningEffort> validSet = matrix.GetSupportedReasoningValues(modelId);
+                string validList = string.Join(", ", validSet.Select(v => v.ToString().ToLowerInvariant()));
+                await Console.Error.WriteLineAsync($"Error: --reasoning-effort '{reasoningEffortStr}' is not a valid value.");
+                await Console.Error.WriteLineAsync($"Supported values: {validList}");
+                Environment.Exit(1);
+                return;
+            }
+
+            IReadOnlySet<ReasoningEffort> supported = matrix.GetSupportedReasoningValues(modelId);
+            if (!supported.Contains(reasoningEffort))
+            {
+                string validList = string.Join(", ", supported.Select(v => v.ToString().ToLowerInvariant()));
+                await Console.Error.WriteLineAsync($"Error: --reasoning-effort '{reasoningEffortStr}' is not supported for provider '{provider}', model '{modelId}'.");
+                await Console.Error.WriteLineAsync($"Supported values: {validList}");
+                Environment.Exit(1);
+                return;
+            }
+        }
+
         IGitCommitParser commitParser = serviceProvider.GetRequiredService<IGitCommitParser>();
 
         if (format == "raw")
@@ -362,10 +405,13 @@ rootCommand.SetAction(async result =>
             IAsyncEnumerable<CommitRecord> rawCommits = commitParser.ParseCommitsStreamAsync(repoName, license,
                 targetDir.FullName, repoUrl, CancellationToken.None);
 
+            ReasoningEffort parsedEffort = Enum.TryParse<ReasoningEffort>(reasoningEffortStr, ignoreCase: true, out var e) ? e : ReasoningEffort.Auto;
+            ChatOptions finalOptions = chatOptionsBuilder.BuildChatOptions(parsedEffort, provider, modelId ?? "");
+
             IAsyncEnumerable<CommitTrainingRecord> trainingRecords =
                 BuildTrainingRecords(rawCommits, effectiveSystemTemplate, effectiveUserTemplate,
                     redactionTier, llmAssistantOutput, llmOverridePrompt,
-                    llmWriter, repoName, license, repoUrl, CancellationToken.None);
+                    llmWriter, repoName, license, repoUrl, finalOptions, CancellationToken.None);
 
             await trainingWriter.WriteToJsonFileAsync(trainingRecords, outputPath, CancellationToken.None);
         }
@@ -390,6 +436,7 @@ async IAsyncEnumerable<CommitTrainingRecord> BuildTrainingRecords(
     bool llmAssistantOutput, string llmOverridePrompt,
     LlmAssistantWriter llmWriter,
     string repoName, string license, string repoUrl,
+    ChatOptions chatOptions,
     [EnumeratorCancellation] CancellationToken cancellationToken)
 {
     RegexPiiRedactor piiRedactor = new();
@@ -419,13 +466,10 @@ async IAsyncEnumerable<CommitTrainingRecord> BuildTrainingRecords(
                     commit.RepoName, license, commit.RepoUrl)
                 : userContent;
 
-            // Use a temporary ChatOptions for now (ticket 10 replaces this with DI)
-            var tempMatrix = new ReasoningEffortMatrix();
-            var tempBuilder = new ChatOptionsBuilder(tempMatrix);
-            ChatOptions tempOptions = tempBuilder.BuildChatOptions(DiffToJsonLib.Reasoning.ReasoningEffort.Auto, "", "");
+            ChatOptions effectiveOptions = chatOptions;
 
             string? llmResult = await llmWriter.GenerateAssistantAsync(
-                systemContent, llmUserPrompt, tempOptions, cancellationToken);
+                systemContent, llmUserPrompt, effectiveOptions, cancellationToken);
 
             if (llmResult is not null)
             {
