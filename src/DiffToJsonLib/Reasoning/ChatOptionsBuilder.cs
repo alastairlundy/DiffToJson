@@ -79,6 +79,15 @@ public sealed class ChatOptionsBuilder : IChatOptionsBuilder
     {
         ChatOptions options = new();
 
+        bool reasoningUsed = reasoningEffort switch
+        {
+            ReasoningEffort.Auto => _matrix.ProducesReasoningOnAuto(model),
+            ReasoningEffort.Off => false,
+            _ => true
+        };
+        int defaultMaxTokens = reasoningUsed ? 16_000 : 8_000;
+        options.MaxOutputTokens ??= defaultMaxTokens;
+
         ModelFamily family = ClassifyModel(model);
 
         switch (family)
