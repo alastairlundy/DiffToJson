@@ -5,6 +5,7 @@
         <LangVersion>14</LangVersion>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
+        <WarningsAsErrors>CS8509</WarningsAsErrors>
         <Title>DiffToJson.Lib</Title>
         <Authors>Alastair Lundy</Authors>
         <IsPackable>false</IsPackable>
