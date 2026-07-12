@@ -41,7 +41,14 @@ This can be useful for preparing git commit diffs and message data for training 
 - Switched PII redaction to implement`Microsoft.Extensions.Compliance.Redaction`'s ``Redactor`` abstraction  .
 
 #### Removals
-- Removed the `ChatClientCreator` helper and `CustomOllamaJsonContext` (now provided by the library as `IChatClientFactory`, `ChatClientFactory`, and `OllamaJsonContext`).</PackageReleaseNotes>
+- Removed the `ChatClientCreator` helper and `CustomOllamaJsonContext` (now provided by the library as `IChatClientFactory`, `ChatClientFactory`, and `OllamaJsonContext`).
+
+#### Breaking Changes
+- The raw format path (`--format raw`) now honors the `--redaction` flag. Previously, the raw path always redacted the commit message regardless of the flag. Users relying on "message is always redacted" in the raw format should explicitly use `--redaction message` or `--redaction all`.
+
+#### Modifications
+- Refactored the training pipeline to use the new `TrainingExampleBuilder` library module.
+- Removed the inline `BuildTrainingRecords` function from `Program.cs`.</PackageReleaseNotes>
     <Version>0.4.0</Version>
     <AssemblyVersion>0.4.0.0</AssemblyVersion>
   </PropertyGroup>

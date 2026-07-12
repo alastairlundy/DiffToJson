@@ -17,7 +17,14 @@
         <PackageReleaseNotes>- ⚙️ Converted project to NuGet Central Package Management (CPM).
 - ⚙️ Updated dependencies:
     - CliInvoke.Core: 2.7.0 → 2.8.1
-    - Microsoft.Extensions.AI.Abstractions: 10.6.0 → 10.7.0</PackageReleaseNotes>
+    - Microsoft.Extensions.AI.Abstractions: 10.6.0 → 10.7.0
+
+#### Breaking Changes
+- The `IGitCommitParser` interface has been reduced from three methods to two. `ParseCommitsToTrainingStreamAsync` has been removed. Training-record assembly is now handled by the new `TrainingExampleBuilder` class.
+
+#### Additions
+- Added `TrainingExampleBuilder`, `RedactionPolicy`, `PromptSubstitutor`, and related types in the `DiffToJsonLib.Training` namespace.
+- Added `GitLogParser` in the `DiffToJsonLib.Parsing` namespace for git-free parsing.</PackageReleaseNotes>
         <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
         <Version>0.3.0</Version>
     </PropertyGroup>
