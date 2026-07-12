@@ -1,0 +1,6 @@
+<Project>
+  <PropertyGroup>
+    <SolutionDir>$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildProjectDirectory), 'src\DiffToJsonApp.slnx'))</SolutionDir>
+    <SolutionName>DiffToJsonApp</SolutionName>
+  </PropertyGroup>
+</Project>
