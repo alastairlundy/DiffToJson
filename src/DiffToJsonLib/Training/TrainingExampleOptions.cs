@@ -1,4 +1,4 @@
-﻿/*
+/*
     Copyright 2026 Alastair Lundy
 
    Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,13 +14,15 @@
    limitations under the License.
  */
 
-namespace DiffToJsonLib.Abstractions;
+using DiffToJsonLib.Prompts;
+using Microsoft.Extensions.AI;
 
-public interface IGitCommitParser
-{
-    Task<CommitRecord[]> ParseCommitsToArrayAsync(string repoName, string license,
-        string workingDir, string repoUrl, CancellationToken cancellationToken);
-    
-    IAsyncEnumerable<CommitRecord> ParseCommitsStreamAsync(string repoName, string license,
-        string workingDir, string repoUrl, CancellationToken cancellationToken);
-}
+namespace DiffToJsonLib.Training;
+
+public sealed record TrainingExampleOptions(
+    PromptTemplate Template,
+    string? LlmOverridePrompt,
+    bool LlmAssistantOutput,
+    RedactionTier Tier,
+    ChatOptions Options
+);
