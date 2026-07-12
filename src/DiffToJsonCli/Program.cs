@@ -20,6 +20,7 @@ using System.Text.RegularExpressions;
 using CliInvoke.Extensions;
 using DiffToJsonLib.Prompts;
 using DiffToJsonLib.Training;
+using DiffToJsonLib.Training.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 using DiffToJsonLib.Reasoning;
 using DiffToJsonLib.Models;
@@ -52,32 +53,6 @@ string? ValidatePlaceholders(string value)
     return null;
 }
 
-static string GetReasoningEffortHelpText(string provider, string modelId)
-{
-    if (!string.IsNullOrEmpty(provider) && !string.IsNullOrEmpty(modelId))
-    {
-        var matrix = new ReasoningEffortMatrix();
-        IReadOnlySet<ReasoningEffort> validSet = matrix.GetSupportedReasoningValues(modelId);
-        if (validSet.Count > 0)
-        {
-            return string.Join(", ", validSet.Select(v => v.ToString().ToLowerInvariant()));
-        }
-    }
-
-    return "auto, on, off, low, medium, high, xhigh, max";
-}
-
-static string SubstitutePlaceholders(string text, string diff, string commitMessage,
-    string repoName, string license, string repoUrl)
-{
-    return text
-        .Replace("{diff}", diff)
-        .Replace("{commitMessage}", commitMessage)
-        .Replace("{repoName}", repoName)
-        .Replace("{license}", license)
-        .Replace("{repoUrl}", repoUrl);
-}
-
 IServiceCollection services = new ServiceCollection();
 
 services.AddCliInvoke();
@@ -86,6 +61,18 @@ services.AddRedaction(redaction =>
     redaction.SetFallbackRedactor<RegexPiiRedactor>();
 });
 
+services.AddSingleton<RedactionPolicy>(sp =>
+{
+    var redactor = sp.GetRequiredService<Redactor>();
+    return new RedactionPolicy(new Dictionary<RedactionTier, Redactor>
+    {
+        [RedactionTier.Message] = redactor,
+        [RedactionTier.Diff] = redactor,
+        [RedactionTier.All] = redactor
+    });
+});
+services.AddSingleton<IAssistantMessageGenerator, LlmAssistantWriter>();
+services.AddSingleton<TrainingExampleBuilder>();
 services.AddSingleton<IDiffJsonFileWriter, DiffJsonFileWriter>();
 services.AddSingleton<IDiffTrainingJsonFileWriter, DiffTrainingJsonFileWriter>();
 services.AddSingleton<IGitCommitParser, GitCommitParser>();
@@ -318,12 +305,9 @@ rootCommand.SetAction(async result =>
         services.AddSingleton<IChatClientFactory>(_ =>
             new ChatClientFactory(provider, apiKey, endpointUrl ?? "", modelId ?? ""));
 
-        var redactionPolicy = redactionTier == RedactionTier.All
-            ? new RedactionPolicy(new Dictionary<RedactionTier, Redactor> { [RedactionTier.All] = new RegexPiiRedactor() })
-            : new RedactionPolicy(new Dictionary<RedactionTier, Redactor>());
-
-        services.AddSingleton(sp =>
-            new LlmAssistantWriter(sp.GetRequiredService<IChatClientFactory>(), redactionPolicy));
+        services.AddSingleton(sp => new LlmAssistantWriter(
+            sp.GetRequiredService<IChatClientFactory>(),
+            sp.GetRequiredService<RedactionPolicy>()));
 
         string license;
 
@@ -391,16 +375,31 @@ rootCommand.SetAction(async result =>
         if (format == "raw")
         {
             IDiffJsonFileWriter diffJsonFileWriter = serviceProvider.GetRequiredService<IDiffJsonFileWriter>();
+            RedactionPolicy redactionPolicy = serviceProvider.GetRequiredService<RedactionPolicy>();
 
-            IAsyncEnumerable<CommitRecord> records = commitParser.ParseCommitsStreamAsync(repoName, license,
-                targetDir.FullName, repoUrl, CancellationToken.None);
+            static async IAsyncEnumerable<CommitRecord> ApplyRedaction(
+                IAsyncEnumerable<CommitRecord> source,
+                RedactionPolicy policy,
+                RedactionTier tier,
+                [EnumeratorCancellation] CancellationToken ct)
+            {
+                await foreach (var record in source.WithCancellation(ct))
+                {
+                    yield return policy.Redact(record, tier);
+                }
+            }
+
+            IAsyncEnumerable<CommitRecord> records = ApplyRedaction(
+                commitParser.ParseCommitsStreamAsync(repoName, license,
+                    targetDir.FullName, repoUrl, CancellationToken.None),
+                redactionPolicy, redactionTier, CancellationToken.None);
 
             await diffJsonFileWriter.WriteToJsonFileAsync(records, outputPath, CancellationToken.None);
         }
         else
         {
             IDiffTrainingJsonFileWriter trainingWriter = serviceProvider.GetRequiredService<IDiffTrainingJsonFileWriter>();
-            LlmAssistantWriter llmWriter = serviceProvider.GetRequiredService<LlmAssistantWriter>();
+            TrainingExampleBuilder trainingBuilder = serviceProvider.GetRequiredService<TrainingExampleBuilder>();
 
             PromptTemplate preset = PromptPresets.Get(promptStyle);
             string effectiveSystemTemplate = !string.IsNullOrEmpty(systemPromptOverride)
@@ -410,16 +409,23 @@ rootCommand.SetAction(async result =>
                 ? userPromptOverride
                 : preset.User;
 
-            IAsyncEnumerable<CommitRecord> rawCommits = commitParser.ParseCommitsStreamAsync(repoName, license,
-                targetDir.FullName, repoUrl, CancellationToken.None);
+            PromptTemplate effectiveTemplate = new(effectiveSystemTemplate, effectiveUserTemplate);
 
             ReasoningEffort parsedEffort = Enum.TryParse<ReasoningEffort>(reasoningEffortStr, ignoreCase: true, out var e) ? e : ReasoningEffort.Auto;
             ChatOptions finalOptions = chatOptionsBuilder.BuildChatOptions(parsedEffort, provider, modelId ?? "");
 
+            TrainingExampleOptions options = new(
+                effectiveTemplate,
+                string.IsNullOrEmpty(llmOverridePrompt) ? null : llmOverridePrompt,
+                llmAssistantOutput,
+                redactionTier,
+                finalOptions);
+
+            IAsyncEnumerable<CommitRecord> rawCommits = commitParser.ParseCommitsStreamAsync(repoName, license,
+                targetDir.FullName, repoUrl, CancellationToken.None);
+
             IAsyncEnumerable<CommitTrainingRecord> trainingRecords =
-                BuildTrainingRecords(rawCommits, effectiveSystemTemplate, effectiveUserTemplate,
-                    redactionTier, llmAssistantOutput, llmOverridePrompt,
-                    llmWriter, repoName, license, repoUrl, finalOptions, CancellationToken.None);
+                trainingBuilder.BuildAsync(rawCommits, options, CancellationToken.None);
 
             await trainingWriter.WriteToJsonFileAsync(trainingRecords, outputPath, CancellationToken.None);
         }
@@ -436,79 +442,5 @@ rootCommand.SetAction(async result =>
 ParseResult parseResult = rootCommand.Parse(args);
 
 return await parseResult.InvokeAsync();
-
-async IAsyncEnumerable<CommitTrainingRecord> BuildTrainingRecords(
-    IAsyncEnumerable<CommitRecord> source,
-    string systemTemplate, string userTemplate,
-    RedactionTier redactionTier,
-    bool llmAssistantOutput, string llmOverridePrompt,
-    LlmAssistantWriter llmWriter,
-    string repoName, string license, string repoUrl,
-    ChatOptions chatOptions,
-    [EnumeratorCancellation] CancellationToken cancellationToken)
-{
-    RegexPiiRedactor piiRedactor = new();
-
-    await foreach (CommitRecord commit in source.WithCancellation(cancellationToken))
-    {
-        string message = redactionTier >= RedactionTier.Message
-            ? piiRedactor.Redact(commit.CommitMessage)
-            : commit.CommitMessage;
-
-        string diff = redactionTier >= RedactionTier.Diff
-            ? piiRedactor.Redact(commit.Diff)
-            : commit.Diff;
-
-        string systemContent = SubstitutePlaceholders(systemTemplate, diff, message,
-            commit.RepoName, license, commit.RepoUrl);
-        string userContent = SubstitutePlaceholders(userTemplate, diff, message,
-            commit.RepoName, license, commit.RepoUrl);
-
-        string? assistantContent;
-        string? originalAssistantMessage = null;
-
-        if (llmAssistantOutput)
-        {
-            string llmUserPrompt = !string.IsNullOrEmpty(llmOverridePrompt)
-                ? SubstitutePlaceholders(llmOverridePrompt, diff, message,
-                    commit.RepoName, license, commit.RepoUrl)
-                : userContent;
-
-            ChatOptions effectiveOptions = chatOptions;
-
-            var redactedCommit = new CommitRecord(diff, message, commit.RepoName, commit.License, commit.RepoUrl);
-
-            AssistantMessageResult assistantResult = await llmWriter.GenerateAsync(
-                systemContent, llmUserPrompt, redactedCommit, effectiveOptions, cancellationToken);
-
-            if (assistantResult is AssistantMessageResult.AssistantMessageGenerated generated)
-            {
-                assistantContent = generated.Content;
-                originalAssistantMessage = message;
-            }
-            else
-            {
-                assistantContent = null;
-                originalAssistantMessage = message;
-            }
-        }
-        else
-        {
-            assistantContent = message;
-        }
-
-        yield return new CommitTrainingRecord(
-            Messages:
-            [
-                new Message("system", systemContent),
-                new Message("user", userContent),
-                new Message("assistant", assistantContent)
-            ],
-            Provenance: new Provenance(commit.RepoName, commit.RepoUrl),
-            Legal: new Legal(license),
-            OriginalAssistantMessage: originalAssistantMessage
-        );
-    }
-}
 
 
