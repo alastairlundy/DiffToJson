@@ -19,9 +19,13 @@ using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using CliInvoke.Extensions;
 using DiffToJsonLib.Prompts;
+using DiffToJsonLib.Training;
 using Microsoft.Extensions.DependencyInjection;
 using DiffToJsonLib.Reasoning;
+using DiffToJsonLib.Models;
+using DiffToJsonLib.Redactors;
 using DiffToJsonLib.Writers;
+using Microsoft.Extensions.Compliance.Redaction;
 using ReasoningEffort = DiffToJsonLib.Reasoning.ReasoningEffort;
 
 HashSet<string> knownPlaceholders = new(StringComparer.OrdinalIgnoreCase)
@@ -314,8 +318,12 @@ rootCommand.SetAction(async result =>
         services.AddSingleton<IChatClientFactory>(_ =>
             new ChatClientFactory(provider, apiKey, endpointUrl ?? "", modelId ?? ""));
 
+        var redactionPolicy = redactionTier == RedactionTier.All
+            ? new RedactionPolicy(new Dictionary<RedactionTier, Redactor> { [RedactionTier.All] = new RegexPiiRedactor() })
+            : new RedactionPolicy(new Dictionary<RedactionTier, Redactor>());
+
         services.AddSingleton(sp =>
-            new LlmAssistantWriter(sp.GetRequiredService<IChatClientFactory>(), redactionTier));
+            new LlmAssistantWriter(sp.GetRequiredService<IChatClientFactory>(), redactionPolicy));
 
         string license;
 
@@ -468,12 +476,14 @@ async IAsyncEnumerable<CommitTrainingRecord> BuildTrainingRecords(
 
             ChatOptions effectiveOptions = chatOptions;
 
-            string? llmResult = await llmWriter.GenerateAssistantAsync(
-                systemContent, llmUserPrompt, effectiveOptions, cancellationToken);
+            var redactedCommit = new CommitRecord(diff, message, commit.RepoName, commit.License, commit.RepoUrl);
 
-            if (llmResult is not null)
+            AssistantMessageResult assistantResult = await llmWriter.GenerateAsync(
+                systemContent, llmUserPrompt, redactedCommit, effectiveOptions, cancellationToken);
+
+            if (assistantResult is AssistantMessageResult.AssistantMessageGenerated generated)
             {
-                assistantContent = llmResult;
+                assistantContent = generated.Content;
                 originalAssistantMessage = message;
             }
             else
