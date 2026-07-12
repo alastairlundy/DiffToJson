@@ -16,21 +16,16 @@
 
 using System.Runtime.CompilerServices;
 using CliInvoke.Core;
-using Microsoft.Extensions.Compliance.Redaction;
-using Microsoft.Extensions.Compliance.Classification;
-using DiffToJsonLib.Prompts;
+using DiffToJsonLib.Parsing;
 
 namespace DiffToJsonLib;
 
 public class GitCommitParser : IGitCommitParser
 {
-    private readonly IRedactorProvider _redactorProvider;
     private readonly IProcessInvoker _processInvoker;
 
-    public GitCommitParser(IRedactorProvider redactorProvider, 
-        IProcessInvoker processInvoker)
+    public GitCommitParser(IProcessInvoker processInvoker)
     {
-        _redactorProvider = redactorProvider;
         _processInvoker = processInvoker;
     }
 
@@ -53,192 +48,16 @@ public class GitCommitParser : IGitCommitParser
         string repoUrl, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         await using PipedProcessResult processResult = await GetDiffsAsync(workingDir, cancellationToken).ConfigureAwait(false);
-        
-        processResult.StandardOutput.Position = 0;
-        using StreamReader reader = new(processResult.StandardOutput, Encoding.Default);
-
-        string? line;
-        bool isCollectingMessage = false;
-        bool isCollectingDiff = false;
-        
-        StringBuilder messageBuilder = new();
-        StringBuilder diffBuilder = new();
-        
-        while ((line = await reader.ReadLineAsync(cancellationToken)) != null)
-        {
-            if (line.StartsWith("commit "))
-            {
-                if (messageBuilder.Length > 0 && !string.IsNullOrWhiteSpace(diffBuilder.ToString()))
-                {
-                    yield return new CommitRecord(
-                        diffBuilder.ToString().TrimStart().TrimEnd(),
-                        _redactorProvider.GetRedactor(new DataClassificationSet(PiiRedactionCategory.Value)).Redact(messageBuilder.ToString().TrimStart().TrimEnd()),
-                        RepoName: repoName,
-                        License: license,
-                        RepoUrl: repoUrl
-                    );
-                }
-                
-                messageBuilder.Clear();
-                diffBuilder.Clear();
-                isCollectingMessage = false;
-                isCollectingDiff = false;
-            }
-            else if (line.StartsWith("Author: ") || line.StartsWith("Date: "))
-            {
-                // Skip
-            }
-            else if (!isCollectingDiff && !string.IsNullOrWhiteSpace(line) && !isCollectingMessage)
-            {
-                isCollectingMessage = true;
-                messageBuilder.AppendLine(line);
-            }
-            else if (!isCollectingDiff && (isCollectingMessage || string.IsNullOrWhiteSpace(line)))
-            {
-                if (line.StartsWith("diff --git"))
-                {
-                    isCollectingDiff = true;
-                    // Start collecting diff but omit the "diff --git " line
-                }
-                else
-                {
-                    messageBuilder.AppendLine(line);
-                }
-            }
-            else if (line.StartsWith("diff --git"))
-            {
-                isCollectingDiff = true;
-                // Start collecting diff but omit the "diff --git " line
-            }
-            else if (isCollectingDiff)
-            {
-                diffBuilder.AppendLine(line);
-            }
-        }
-        
-        if (messageBuilder.Length > 0 && !string.IsNullOrWhiteSpace(diffBuilder.ToString()))
-        { 
-            yield return new CommitRecord(
-                diffBuilder.ToString().TrimStart().TrimEnd(),
-                _redactorProvider.GetRedactor(new DataClassificationSet(PiiRedactionCategory.Value)).Redact(messageBuilder.ToString().TrimStart().TrimEnd()),
-                RepoName: repoName,
-                License: license,
-                RepoUrl: repoUrl
-            );
-        }
-    }
-
-    public async IAsyncEnumerable<CommitTrainingRecord> ParseCommitsToTrainingStreamAsync(string repoName, string license,
-        string workingDir, string repoUrl, string presetName, RedactionTier redactionTier,
-        [EnumeratorCancellation] CancellationToken cancellationToken)
-    {
-        PromptTemplate template = PromptPresets.Get(presetName);
-        RegexPiiRedactor piiRedactor = new();
-
-        await using PipedProcessResult processResult = await GetDiffsAsync(workingDir, cancellationToken)
-            .ConfigureAwait(false);
 
         processResult.StandardOutput.Position = 0;
         using StreamReader reader = new(processResult.StandardOutput, Encoding.Default);
 
-        string? line;
-        bool isCollectingMessage = false;
-        bool isCollectingDiff = false;
+        GitLogParser gitLogParser = new();
 
-        StringBuilder messageBuilder = new();
-        StringBuilder diffBuilder = new();
-
-        while ((line = await reader.ReadLineAsync(cancellationToken)) != null)
+        await foreach (RawCommit raw in gitLogParser.ParseAsync(reader, cancellationToken))
         {
-            if (line.StartsWith("commit "))
-            {
-                if (messageBuilder.Length > 0 && !string.IsNullOrWhiteSpace(diffBuilder.ToString()))
-                {
-                    yield return BuildTrainingRecord(template, messageBuilder, diffBuilder,
-                        repoName, repoUrl, license, redactionTier, piiRedactor);
-                }
-
-                messageBuilder.Clear();
-                diffBuilder.Clear();
-                isCollectingMessage = false;
-                isCollectingDiff = false;
-            }
-            else if (line.StartsWith("Author: ") || line.StartsWith("Date: "))
-            {
-                // Skip
-            }
-            else if (!isCollectingDiff && !string.IsNullOrWhiteSpace(line) && !isCollectingMessage)
-            {
-                isCollectingMessage = true;
-                messageBuilder.AppendLine(line);
-            }
-            else if (!isCollectingDiff && (isCollectingMessage || string.IsNullOrWhiteSpace(line)))
-            {
-                if (line.StartsWith("diff --git"))
-                {
-                    isCollectingDiff = true;
-                }
-                else
-                {
-                    messageBuilder.AppendLine(line);
-                }
-            }
-            else if (line.StartsWith("diff --git"))
-            {
-                isCollectingDiff = true;
-            }
-            else if (isCollectingDiff)
-            {
-                diffBuilder.AppendLine(line);
-            }
-        }
-
-        if (messageBuilder.Length > 0 && !string.IsNullOrWhiteSpace(diffBuilder.ToString()))
-        {
-            yield return BuildTrainingRecord(template, messageBuilder, diffBuilder,
-                repoName, repoUrl, license, redactionTier, piiRedactor);
+            yield return new CommitRecord(raw.Diff, raw.Message, repoName, license, repoUrl);
         }
     }
 
-    private static CommitTrainingRecord BuildTrainingRecord(
-        PromptTemplate template, StringBuilder messageBuilder, StringBuilder diffBuilder,
-        string repoName, string repoUrl, string license,
-        RedactionTier redactionTier, RegexPiiRedactor piiRedactor)
-    {
-        string rawMessage = messageBuilder.ToString().TrimStart().TrimEnd();
-        string rawDiff = diffBuilder.ToString().TrimStart().TrimEnd();
-
-        string message = redactionTier >= RedactionTier.Message
-            ? piiRedactor.Redact(rawMessage)
-            : rawMessage;
-
-        string diff = redactionTier >= RedactionTier.Diff
-            ? piiRedactor.Redact(rawDiff)
-            : rawDiff;
-
-        string systemContent = SubstitutePlaceholders(template.System, diff, message, repoName, license, repoUrl);
-        string userContent = SubstitutePlaceholders(template.User, diff, message, repoName, license, repoUrl);
-
-        return new CommitTrainingRecord(
-            Messages:
-            [
-                new Message("system", systemContent),
-                new Message("user", userContent),
-                new Message("assistant", message)
-            ],
-            Provenance: new Provenance(repoName, repoUrl),
-            Legal: new Legal(license)
-        );
-    }
-
-    private static string SubstitutePlaceholders(string text, string diff, string commitMessage,
-        string repoName, string license, string repoUrl)
-    {
-        return text
-            .Replace("{diff}", diff)
-            .Replace("{commitMessage}", commitMessage)
-            .Replace("{repoName}", repoName)
-            .Replace("{license}", license)
-            .Replace("{repoUrl}", repoUrl);
-    }
 }
