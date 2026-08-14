@@ -14,22 +14,26 @@
    limitations under the License.
  */
 
+using DiffToJsonLib.Models;
+using DiffToJsonLib.Redactors;
+using DiffToJsonLib.Training;
+using DiffToJsonLib.Training.Abstractions;
 using Microsoft.Extensions.AI;
 using Polly;
 using Polly.Retry;
 
 namespace DiffToJsonLib.Writers;
 
-public class LlmAssistantWriter
+public class LlmAssistantWriter : IAssistantMessageGenerator
 {
     private readonly Lazy<IChatClient> _clientLazy;
-    private readonly RedactionTier _tier;
+    private readonly RedactionPolicy _policy;
     private readonly ResiliencePipeline _pipeline;
 
-    public LlmAssistantWriter(IChatClientFactory chatClientFactory, RedactionTier tier)
+    public LlmAssistantWriter(IChatClientFactory chatClientFactory, RedactionPolicy policy)
     {
         _clientLazy = new Lazy<IChatClient>(chatClientFactory.Create);
-        _tier = tier;
+        _policy = policy;
         _pipeline = new ResiliencePipelineBuilder()
             .AddRetry(new RetryStrategyOptions
             {
@@ -41,46 +45,58 @@ public class LlmAssistantWriter
             .Build();
     }
 
-    public async Task<string?> GenerateAssistantAsync(
+    public async Task<AssistantMessageResult> GenerateAsync(
         string systemPrompt,
         string userPrompt,
-        ChatOptions chatOptions,
-        CancellationToken cancellationToken = default)
+        CommitRecord redactedCommit,
+        ChatOptions options,
+        CancellationToken cancellationToken)
     {
         IChatClient client = _clientLazy.Value;
 
         ChatMessage system = new(ChatRole.System, systemPrompt);
         ChatMessage user = new(ChatRole.User, userPrompt);
 
-        ChatResponse? response = await _pipeline.ExecuteAsync(
-            async ct => await client.GetResponseAsync([system, user], chatOptions, ct),
-            cancellationToken);
-
-        ChatMessage? assistantMessage = response.Messages
-            .FirstOrDefault(m => m.Role == ChatRole.Assistant);
-
-        if (assistantMessage is null)
-            return null;
-
-        List<string> reasoningItems = assistantMessage.Contents
-            .OfType<TextReasoningContent>()
-            .Select(r => r.Text)
-            .ToList();
-
-        string visibleText = assistantMessage.Text ?? "";
-
-        string composed = reasoningItems.Count > 0
-            ? $"<think>{string.Join("\n", reasoningItems)}</think>\n\n{visibleText}"
-            : visibleText;
-
-        string result = composed.Trim();
-
-        if (_tier == RedactionTier.All)
+        try
         {
-            var redactor = new RegexPiiRedactor();
-            result = redactor.Redact(result);
-        }
+            ChatResponse? response = await _pipeline.ExecuteAsync(
+                async ct => await client.GetResponseAsync([system, user], options, ct),
+                cancellationToken);
 
-        return result;
+            ChatMessage? assistantMessage = response.Messages
+                .FirstOrDefault(m => m.Role == ChatRole.Assistant);
+
+            if (assistantMessage is null)
+            {
+                return new AssistantMessageResult.AssistantMessageAttemptedAndFailed(
+                    FallbackContent: null,
+                    OriginalAssistantMessage: redactedCommit.CommitMessage);
+            }
+
+            List<string> reasoningItems = assistantMessage.Contents
+                .OfType<TextReasoningContent>()
+                .Select(r => r.Text)
+                .ToList();
+
+            string visibleText = assistantMessage.Text ?? "";
+
+            string composed = reasoningItems.Count > 0
+                ? $"<think>{string.Join("\n", reasoningItems)}</think>\n\n{visibleText}"
+                : visibleText;
+
+            string result = composed.Trim();
+
+            result = _policy.Redact(result, RedactionTier.All);
+
+            return new AssistantMessageResult.AssistantMessageGenerated(
+                result,
+                redactedCommit.CommitMessage);
+        }
+        catch
+        {
+            return new AssistantMessageResult.AssistantMessageAttemptedAndFailed(
+                FallbackContent: null,
+                OriginalAssistantMessage: redactedCommit.CommitMessage);
+        }
     }
 }
