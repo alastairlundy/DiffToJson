@@ -3,9 +3,9 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="Anthropic" Version="12.40.0" />
-    <PackageVersion Include="CliInvoke.Core" Version="2.10.0" />
-    <PackageVersion Include="CliInvoke.Extensions" Version="2.10.1" />
+    <PackageVersion Include="Anthropic" Version="12.42.1" />
+    <PackageVersion Include="CliInvoke.Core" Version="2.10.3" />
+    <PackageVersion Include="CliInvoke.Extensions" Version="2.10.2" />
     <PackageVersion Include="Microsoft.Extensions.AI.Abstractions" Version="10.9.0" />
     <PackageVersion Include="Microsoft.Extensions.AI.OpenAI" Version="10.9.0" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.11" />
@@ -13,8 +13,8 @@
     <PackageVersion Include="OllamaSharp" Version="5.4.30" />
     <PackageVersion Include="Polly" Version="8.7.0" />
     <PackageVersion Include="System.CommandLine" Version="2.0.11" />
-    <PackageVersion Include="TUnit" Version="1.58.0" />
-    <PackageVersion Include="Verify" Version="31.24.0" />
-    <PackageVersion Include="Verify.TUnit" Version="31.24.0" />
+    <PackageVersion Include="TUnit" Version="1.65.63" />
+    <PackageVersion Include="Verify" Version="31.28.0" />
+    <PackageVersion Include="Verify.TUnit" Version="31.28.0" />
   </ItemGroup>
 </Project>
