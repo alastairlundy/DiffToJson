@@ -1,4 +1,4 @@
-# Context
+# GLOSSARY
 
 This document serves as a glossary and domain map for the DiffToJson project. It contains canonical terms and their definitions, stripped of implementation details.
 
