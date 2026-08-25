@@ -16,13 +16,13 @@ This can be useful for preparing git commit diffs and message data for training 
 
 Two output formats are available, selected via `--format`:
 
-- **`raw`** (legacy): PascalCase JSONL with flat fields — `Diff`, `CommitMessage`, `RepoName`, `License`, `RepoUrl`.
+- **`raw`** (legacy): PascalCase JSONL with flat fields — `Diff`, `CommitMessage`, `RepoName`, `License`, `RepoUrl`. Note: `--format raw` now honors the `--redaction` flag. Previously, the raw path always redacted commit messages.
 - **`training`** (default): camelCase JSONL shaped for LLM post-training pipelines. Each record is a Training Example with a ChatML `messages` array, `provenance`, `legal`, and optionally `originalAssistantMessage`. See [Training Example Output](#training-example-output) below.
 
 ### Documented Information (raw format)
 * The Git Diff
 * The Git Commit Message associated with the diff
-* The license Name if a LICENSE.txt, LICENSE.md, or LICENSE.txt file is present in the repo directory — An LLM call is required to compute this. As a fallback "Unknown" is returned otherwise.
+* The license Name if a LICENSE.md, LICENSE.txt, or LICENSE file is present in the repo directory — An LLM call is required to compute this. As a fallback "Unknown" is returned otherwise.
 * The Git project name — Obtained from the Git Repo Directory name
 * The Git Repo URL if provided by the CLI caller.
 
@@ -147,6 +147,12 @@ diff-to-json --repo-directory "C:\path\to\your\repo" --format training --prompt-
 diff-to-json --repo-directory "C:\path\to\your\repo" --format training --llm-assistant-output --model-id "qwen3.5:4b" --endpoint-url "http://localhost:11434" --provider "ollama" -o "C:\output\folder"
 ```
 
+### With Reasoning Effort Control
+
+```bash
+diff-to-json --repo-directory "C:\path\to\your\repo" --format training --llm-assistant-output --reasoning-effort "high" --model-id "qwen3.5:4b" --endpoint-url "http://localhost:11434" --provider "ollama" -o "C:\output\folder"
+```
+
 ### Using Custom Prompt Overrides
 
 ```bash
@@ -177,6 +183,7 @@ diff-to-json --repo-directory "C:\path\to\your\repo" --format raw -o "C:\output\
 | `--user-prompt` | `string` | Optional | `""` (uses preset) | Override the user prompt template. Supports [placeholders](#placeholders). |
 | `--llm-assistant-output` | `bool` | Optional | `false` | Enable LLM-generated assistant messages. Requires `--format training`. See [LLM Override](#llm-override). |
 | `--llm-override-prompt` | `string` | Optional | `""` (uses user prompt) | Override the prompt sent to the LLM when `--llm-assistant-output` is enabled. Supports [placeholders](#placeholders). Requires `--llm-assistant-output`. |
+| `--reasoning-effort` | `string` | Optional | `auto` | Reasoning effort level for the AI model. Valid values: `auto`, `on`, `off`, `low`, `medium`, `high`, `xhigh`, `max`. Supported values depend on provider/model. Requires `--llm-assistant-output` when set to non-`auto`. Requires `--model-id`. |
 | `--redaction` | `string` | Optional | `message` | PII redaction tier. See [Redaction Tiers](#redaction-tiers). |
 
 ## Cross-Option Rules
@@ -188,6 +195,8 @@ The following validators enforce constraints between flags:
 | `--llm-assistant-output` + `--format raw` | **Error** — incompatible | `Error: --llm-assistant-output is not compatible with --format raw.` |
 | `--llm-override-prompt` set without `--llm-assistant-output` | **Error** — override prompt requires override enabled | `Error: --llm-override-prompt requires --llm-assistant-output.` |
 | `--redaction none` + `--llm-assistant-output` | **Warning** — proceeds but may expose PII in LLM output | `Warning: --redaction none combined with --llm-assistant-output may expose PII in LLM output.` |
+| `--reasoning-effort` set to non-`auto` without `--llm-assistant-output` | **Error** — reasoning effort requires LLM output enabled | `Error: --reasoning-effort requires --llm-assistant-output when set to a value other than 'auto'.` |
+| `--reasoning-effort` set without `--model-id` (with `--llm-assistant-output`) | **Error** — model ID required for reasoning effort | `Error: --reasoning-effort requires --model-id when --llm-assistant-output is enabled.` |
 
 Unknown placeholders in `--system-prompt`, `--user-prompt`, or `--llm-override-prompt` also cause an error before any records are written.
 
@@ -263,7 +272,7 @@ The tool uses a regex-based approach to detect and redact email addresses within
 For sensitive git email addresses, always conduct a human review. 
 
 ### License Detection Logic
-The tool automatically discovers license information by searching for `LICENSE.md`, `LICENSE.txt`, or `LICENSE` files in the repository root. If found, the content is sent to a configured LLM (via `OllamaSharp` or `Microsoft.Extensions.AI.OpenAI`) to extract the license name. If no file is found or the LLM cannot determine the license, it falls back to "Unknown".
+The tool automatically discovers license information by searching for `LICENSE.md`, `LICENSE.txt`, or `LICENSE` files in the repository root. If found, the content is sent to a configured LLM (via the configured AI provider) to extract the license name. If no file is found or the LLM cannot determine the license, it falls back to "Unknown".
 
 ### Merge Commits
 
