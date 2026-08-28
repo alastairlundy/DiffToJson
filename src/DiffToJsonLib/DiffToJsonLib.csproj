@@ -14,19 +14,26 @@
         <Copyright>Copyright (c) Alastair Lundy 2026</Copyright>
         <RepositoryUrl>https://github.com/alastairlundy/difftojson</RepositoryUrl>
         <RepositoryType>git</RepositoryType>
-        <PackageReleaseNotes>- ⚙️ Converted project to NuGet Central Package Management (CPM).
-- ⚙️ Updated dependencies:
-    - CliInvoke.Core: 2.7.0 → 2.8.1
-    - Microsoft.Extensions.AI.Abstractions: 10.6.0 → 10.7.0
+        <PackageReleaseNotes>🆕 Additions
 
-#### Breaking Changes
-- The `IGitCommitParser` interface has been reduced from three methods to two. `ParseCommitsToTrainingStreamAsync` has been removed. Training-record assembly is now handled by the new `TrainingExampleBuilder` class.
+- Added a `Reasoning` module with per-model wire-format support: `ReasoningEffort`, `IReasoningEffortMatrix`/`ReasoningEffortMatrix`, and `IChatOptionsBuilder`/`ChatOptionsBuilder`.
+- Added `PromptSubstitutor` for template placeholder substitution.
+- Added the `AssistantMessageResult` hierarchy and `IAssistantMessageGenerator` interface for assistant message generation.
+- Added `TrainingExampleOptions` and `DisabledAssistantMessageGenerator`.
+- Added `RedactionPolicy` with commit- and string-level redaction controls.
+- Added the `TrainingExampleBuilder` core pipeline for constructing training examples.
 
-#### Additions
-- Added `TrainingExampleBuilder`, `RedactionPolicy`, `PromptSubstitutor`, and related types in the `DiffToJsonLib.Training` namespace.
-- Added `GitLogParser` in the `DiffToJsonLib.Parsing` namespace for git-free parsing.</PackageReleaseNotes>
+⚙️ Modifications
+
+- Extracted a pure `GitLogParser` state machine from `GitCommitParser`.
+- Shrunk `IGitCommitParser` and reworked `GitCommitParser` as a thin shell.
+- Refactored `LlmAssistantWriter` to implement `IAssistantMessageGenerator`.
+- Enabled `TreatWarningsAsErrors`/`CS8509` configuration in the project.
+- Added `PackageReleaseNotes` documenting the `IGitCommitParser` API shrink and raw-path redaction change.
+- Updated project dependencies to support the reasoning-effort feature.
+</PackageReleaseNotes>
         <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
-        <Version>0.3.0</Version>
+        <Version>0.5.0</Version>
     </PropertyGroup>
 
     <ItemGroup>

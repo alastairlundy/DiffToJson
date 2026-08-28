@@ -27,29 +27,16 @@
 This can be useful for preparing git commit diffs and message data for training AI/ML models or similar use cases.</Description>
     <Copyright>Copyright (c) Alastair Lundy 2026</Copyright>
     <PackageTags>git, diff, commit, JSONL, JSON</PackageTags>
-    <PackageReleaseNotes>
-#### Additions
-- Wired CLI flags, format selection, validators, and dependency injection into `Program.cs`.
-- Added the ability to output Commit Message data as ChatML formatt JSONL files for easier usage with LLMs
-- Added the ability to disable PII Redaction or increase the level of PII Redaction to output messages + input diffs
+    <PackageReleaseNotes>🆕 Additions
 
-#### Modifications
-- Renamed the output file option from `--output-file` to `--output`.
-- Refactored `LicenseFileFinder.FindLicenseFile` to a non-async method with try/catch.
-- Updated `Program.cs` imports to use `DiffToJsonLib.Writers` instead of `DiffToJsonLib.Redactors`.
-- Updated to `CliInvoke` 2.8.2 using the `CliInvoke.Extensions` package and the `AddCliInvoke` DI extension, fixing a related `CliInvoke` issue.
-- Switched PII redaction to implement`Microsoft.Extensions.Compliance.Redaction`'s ``Redactor`` abstraction  .
+- Added the `--reasoning-effort` CLI option with per-model wire-format support (PR #12).
 
-#### Removals
-- Removed the `ChatClientCreator` helper and `CustomOllamaJsonContext` (now provided by the library as `IChatClientFactory`, `ChatClientFactory`, and `OllamaJsonContext`).
+⚙️ Modifications
 
-#### Breaking Changes
-- The raw format path (`--format raw`) now honors the `--redaction` flag. Previously, the raw path always redacted the commit message regardless of the flag. Users relying on "message is always redacted" in the raw format should explicitly use `--redaction message` or `--redaction all`.
-
-#### Modifications
-- Refactored the training pipeline to use the new `TrainingExampleBuilder` library module.
-- Removed the inline `BuildTrainingRecords` function from `Program.cs`.</PackageReleaseNotes>
-    <Version>0.4.0</Version>
+- Wired CLI composition: registered new DI types, replaced `BuildTrainingRecords` with `TrainingExampleBuilder`, and added raw-path redaction.
+- Updated `Program.cs` to generate assistant messages via the new `IAssistantMessageGenerator`.
+- Added `PackageReleaseNotes` to the project.</PackageReleaseNotes>
+    <Version>0.5.0</Version>
     <AssemblyVersion>0.4.0.0</AssemblyVersion>
   </PropertyGroup>
 
