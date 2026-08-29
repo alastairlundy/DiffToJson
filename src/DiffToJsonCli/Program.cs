@@ -220,21 +220,32 @@ rootCommand.SetAction(async result =>
         string outputPath;
         if (string.IsNullOrEmpty(outputFilePath))
         {
-            outputPath = $"{targetDir.FullName}{Path.DirectorySeparatorChar}{repoName}-commits.jsonl";
+            outputPath = Path.Combine(targetDir.FullName, $"{repoName}-commits.jsonl");
+        }
+        else if (outputFilePath.EndsWith(".jsonl", StringComparison.OrdinalIgnoreCase))
+        {
+            outputPath = Path.GetFullPath(outputFilePath);
         }
         else
         {
-            DirectoryInfo directoryInfo = new(outputFilePath);
-
-            outputPath = outputFilePath.EndsWith(".jsonl") ?
-                Path.Combine(directoryInfo.FullName, outputFilePath) :
-                Path.Combine(directoryInfo.FullName, $"{repoName}-commits.jsonl");
+            outputPath = Path.Combine(Path.GetFullPath(outputFilePath), $"{repoName}-commits.jsonl");
         }
 
         string provider = result.GetValue(providerOption) ?? "";
         string apiKey = result.GetValue(apiKeyOption) ?? "";
         string? endpointUrl = result.GetValue(endpointUrlOption);
         string? modelId = result.GetValue(modelIdOption);
+
+        // Fall back to environment variables so secrets (especially the API key) are not
+        // exposed on the command line, where they are visible in process listings.
+        if (string.IsNullOrEmpty(provider))
+            provider = Environment.GetEnvironmentVariable("DIFFTOJSON_PROVIDER") ?? "";
+        if (string.IsNullOrEmpty(apiKey))
+            apiKey = Environment.GetEnvironmentVariable("DIFFTOJSON_API_KEY") ?? "";
+        if (string.IsNullOrEmpty(endpointUrl))
+            endpointUrl = Environment.GetEnvironmentVariable("DIFFTOJSON_ENDPOINT");
+        if (string.IsNullOrEmpty(modelId))
+            modelId = Environment.GetEnvironmentVariable("DIFFTOJSON_MODEL");
 
         string licenseProvided = result.GetValue(licenseOption) ?? "";
 

@@ -15,6 +15,7 @@
  */
 
 using System.ClientModel;
+using System.Net.Http.Headers;
 using Anthropic;
 using Anthropic.Core;
 using Microsoft.Extensions.AI;
@@ -87,7 +88,10 @@ public class ChatClientFactory : IChatClientFactory
             {
                 HttpClient httpClient = new();
                 httpClient.BaseAddress = new Uri("https://ollama.com");
-                httpClient.DefaultRequestHeaders.Add("Authorization: Bearer", _apiKey);
+                if (!string.IsNullOrEmpty(_apiKey))
+                {
+                    httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
+                }
 
                 return new OllamaApiClient(httpClient, _model, OllamaJsonContext.Default);
             }

@@ -50,7 +50,7 @@ public class GitCommitParser : IGitCommitParser
         await using PipedProcessResult processResult = await GetDiffsAsync(workingDir, cancellationToken).ConfigureAwait(false);
 
         processResult.StandardOutput.Position = 0;
-        using StreamReader reader = new(processResult.StandardOutput, Encoding.Default);
+        using StreamReader reader = new(processResult.StandardOutput, Encoding.UTF8);
 
         GitLogParser gitLogParser = new();
 
