@@ -7,84 +7,99 @@ public class ReasoningEffortMatrixTests
 {
     private readonly ReasoningEffortMatrix _matrix = new();
 
-    // --- Known models return correct sets ---
+    private static readonly HashSet<ReasoningEffort> FullSet = new()
+    {
+        ReasoningEffort.Auto, ReasoningEffort.On, ReasoningEffort.Off,
+        ReasoningEffort.Low, ReasoningEffort.Medium, ReasoningEffort.High,
+        ReasoningEffort.XHigh, ReasoningEffort.Max
+    };
+
+    private static readonly HashSet<ReasoningEffort> AnthropicOldSet = new()
+    {
+        ReasoningEffort.Auto, ReasoningEffort.On, ReasoningEffort.Off,
+        ReasoningEffort.Low, ReasoningEffort.Medium, ReasoningEffort.High
+    };
+
+    private static readonly HashSet<ReasoningEffort> DeepseekV4Set = new()
+    {
+        ReasoningEffort.Auto, ReasoningEffort.On, ReasoningEffort.Off,
+        ReasoningEffort.Low, ReasoningEffort.Medium, ReasoningEffort.High,
+        ReasoningEffort.Max
+    };
+
+    private static readonly HashSet<ReasoningEffort> BinaryThinkingSet = new()
+    {
+        ReasoningEffort.Auto, ReasoningEffort.On, ReasoningEffort.Off
+    };
+
+    private static readonly HashSet<ReasoningEffort> OffOnlySet = new()
+    {
+        ReasoningEffort.Auto, ReasoningEffort.Off
+    };
+
+    private static readonly HashSet<ReasoningEffort> AutoOnlySet = new()
+    {
+        ReasoningEffort.Auto
+    };
+
+    private static async Task AssertSetsEqual(IReadOnlySet<ReasoningEffort> actual, HashSet<ReasoningEffort> expected)
+    {
+        await Assert.That(actual.Count).IsEqualTo(expected.Count);
+        foreach (var value in expected)
+        {
+            await Assert.That(actual.Contains(value)).IsTrue();
+        }
+    }
+
+    // --- Known models return exact sets ---
 
     [Test]
     public async Task Gpt4o_ReturnsFullSet()
     {
         var supported = _matrix.GetSupportedReasoningValues("gpt-4o");
-
-        await Assert.That(supported).Contains(ReasoningEffort.Auto);
-        await Assert.That(supported).Contains(ReasoningEffort.Low);
-        await Assert.That(supported).Contains(ReasoningEffort.Medium);
-        await Assert.That(supported).Contains(ReasoningEffort.High);
-        await Assert.That(supported).Contains(ReasoningEffort.XHigh);
-        await Assert.That(supported).Contains(ReasoningEffort.Max);
-        await Assert.That(supported).Contains(ReasoningEffort.Off);
+        AssertSetsEqual(supported, FullSet);
     }
 
     [Test]
     public async Task Gpt5Chat_ReturnsFullSet()
     {
         var supported = _matrix.GetSupportedReasoningValues("gpt-5-chat");
-
-        await Assert.That(supported).Contains(ReasoningEffort.XHigh);
-        await Assert.That(supported).Contains(ReasoningEffort.Max);
+        AssertSetsEqual(supported, FullSet);
     }
 
     [Test]
     public async Task ClaudeSonnet45_ReturnsAnthropicOldSet()
     {
         var supported = _matrix.GetSupportedReasoningValues("claude-sonnet-4-5");
-
-        await Assert.That(supported).Contains(ReasoningEffort.Auto);
-        await Assert.That(supported).Contains(ReasoningEffort.Low);
-        await Assert.That(supported).Contains(ReasoningEffort.High);
-        // AnthropicOldSet does NOT include XHigh or Max
-        await Assert.That(supported.Contains(ReasoningEffort.XHigh)).IsFalse();
-        await Assert.That(supported.Contains(ReasoningEffort.Max)).IsFalse();
+        AssertSetsEqual(supported, AnthropicOldSet);
     }
 
     [Test]
     public async Task DeepseekChat_ReturnsOffOnlySet()
     {
         var supported = _matrix.GetSupportedReasoningValues("deepseek-chat");
-
-        await Assert.That(supported).Contains(ReasoningEffort.Auto);
-        await Assert.That(supported).Contains(ReasoningEffort.Off);
-        await Assert.That(supported.Contains(ReasoningEffort.Low)).IsFalse();
-        await Assert.That(supported.Contains(ReasoningEffort.High)).IsFalse();
+        AssertSetsEqual(supported, OffOnlySet);
     }
 
     [Test]
     public async Task DeepseekV31_ReturnsBinaryThinkingSet()
     {
         var supported = _matrix.GetSupportedReasoningValues("deepseek-v3.1");
-
-        await Assert.That(supported).Contains(ReasoningEffort.Auto);
-        await Assert.That(supported).Contains(ReasoningEffort.On);
-        await Assert.That(supported).Contains(ReasoningEffort.Off);
-        await Assert.That(supported.Contains(ReasoningEffort.Low)).IsFalse();
+        AssertSetsEqual(supported, BinaryThinkingSet);
     }
 
     [Test]
     public async Task DeepseekV4_ReturnsDeepseekV4Set()
     {
         var supported = _matrix.GetSupportedReasoningValues("deepseek-v4");
-
-        await Assert.That(supported).Contains(ReasoningEffort.Max);
-        await Assert.That(supported.Contains(ReasoningEffort.XHigh)).IsFalse();
+        AssertSetsEqual(supported, DeepseekV4Set);
     }
 
     [Test]
     public async Task MiniMaxM3_ReturnsBinaryThinkingSet()
     {
         var supported = _matrix.GetSupportedReasoningValues("minimax-m3");
-
-        await Assert.That(supported).Contains(ReasoningEffort.Auto);
-        await Assert.That(supported).Contains(ReasoningEffort.On);
-        await Assert.That(supported).Contains(ReasoningEffort.Off);
-        await Assert.That(supported.Contains(ReasoningEffort.Low)).IsFalse();
+        AssertSetsEqual(supported, BinaryThinkingSet);
     }
 
     // --- Unknown models ---
@@ -93,9 +108,7 @@ public class ReasoningEffortMatrixTests
     public async Task UnknownModel_ReturnsAutoOnly()
     {
         var supported = _matrix.GetSupportedReasoningValues("nonexistent-model");
-
-        await Assert.That(supported).Contains(ReasoningEffort.Auto);
-        await Assert.That(supported).Count().IsEqualTo(1);
+        AssertSetsEqual(supported, AutoOnlySet);
     }
 
     // --- ProducesReasoningOnAuto ---
