@@ -145,5 +145,9 @@ public class ReasoningEffortMatrixTests
         var lower = _matrix.GetSupportedReasoningValues("gpt-4o");
 
         await Assert.That(upper.Count).IsEqualTo(lower.Count);
+        foreach (var value in lower)
+        {
+            await Assert.That(upper.Contains(value)).IsTrue();
+        }
     }
 }

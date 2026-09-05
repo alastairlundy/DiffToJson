@@ -78,6 +78,11 @@ public sealed class ChatOptionsBuilder : IChatOptionsBuilder
     public ChatOptions BuildChatOptions(ReasoningEffort reasoningEffort, string provider, string model)
     {
         ChatOptions options = new();
+        return BuildChatOptions(options, reasoningEffort, provider, model);
+    }
+
+    internal ChatOptions BuildChatOptions(ChatOptions options, ReasoningEffort reasoningEffort, string provider, string model)
+    {
 
         bool reasoningUsed = reasoningEffort switch
         {

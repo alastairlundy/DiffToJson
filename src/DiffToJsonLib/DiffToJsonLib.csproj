@@ -37,6 +37,10 @@
     </PropertyGroup>
 
     <ItemGroup>
+      <InternalsVisibleTo Include="DiffToJsonLib.Tests" />
+    </ItemGroup>
+
+    <ItemGroup>
       <PackageReference Include="Anthropic" />
       <PackageReference Include="CliInvoke.Core"/>
       <PackageReference Include="Microsoft.Extensions.AI.Abstractions"/>

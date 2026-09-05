@@ -125,15 +125,13 @@ public class ChatOptionsBuilderTests
     [Test]
     public async Task AnthropicOld_BudgetNeverBelow1024()
     {
-        // With Low effort on small max tokens, budget should be clamped to 1024
-        var options = new ChatOptions { MaxOutputTokens = 2000 };
-        // We can't pass custom options to BuildChatOptions, but we can verify
-        // the Math.Max clamp by testing Low (25% of 16000 = 4000, above 1024)
-        var result = _builder.BuildChatOptions(ReasoningEffort.Low, "anthropic", "claude-opus-4-5");
+        // 25% of 3000 = 750, which is below 1024 — clamp should kick in
+        var options = new ChatOptions { MaxOutputTokens = 3000 };
+        var result = _builder.BuildChatOptions(options, ReasoningEffort.Low, "anthropic", "claude-opus-4-5");
 
         var thinking = result.AdditionalProperties!["thinking"] as IDictionary<string, object>;
         long budgetTokens = (long)thinking!["budget_tokens"];
-        await Assert.That(budgetTokens).IsGreaterThanOrEqualTo(1024);
+        await Assert.That(budgetTokens).IsEqualTo(1024);
     }
 
     // --- Anthropic New ---
