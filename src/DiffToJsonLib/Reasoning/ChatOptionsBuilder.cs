@@ -153,6 +153,7 @@ public sealed class ChatOptionsBuilder : IChatOptionsBuilder
 
     private static void BuildOpenAiChatAdaptive(ChatOptions options, ReasoningEffort effort, string provider)
     {
+        BuildOpenAiChatOptions(options, effort, provider);
     }
 
     private static void BuildAnthropicNewChatOptions(ChatOptions options, ReasoningEffort effort, string provider)
@@ -179,28 +180,27 @@ public sealed class ChatOptionsBuilder : IChatOptionsBuilder
 
     private static void BuildAnthropicOldChatOptions(ChatOptions options, ReasoningEffort effort, string provider)
     {
-        long? budgetTokens = null;
-
         if (effort == ReasoningEffort.Off)
         {
-            budgetTokens = 0;
+            // Omit thinking block entirely — Anthropic requires budget_tokens >= 1024
+            // when thinking is enabled, so sending {type: "enabled", budget_tokens: 0}
+            // causes a 400 error.
+            return;
         }
-        else
+
+        long maxTokens = options.MaxOutputTokens ?? 8192;
+
+        double fraction = effort switch
         {
-            long maxTokens = options.MaxOutputTokens ?? 8192;
+            ReasoningEffort.Auto => 0.50,
+            ReasoningEffort.On => 0.50,
+            ReasoningEffort.Low => 0.25,
+            ReasoningEffort.Medium => 0.50,
+            ReasoningEffort.High => 0.75,
+            _ => 0.50
+        };
 
-            double fraction = effort switch
-            {
-                ReasoningEffort.Auto => 0.50,
-                ReasoningEffort.On => 0.50,
-                ReasoningEffort.Low => 0.25,
-                ReasoningEffort.Medium => 0.50,
-                ReasoningEffort.High => 0.75,
-                _ => 0.50
-            };
-
-            budgetTokens = (long)Math.Floor(maxTokens * fraction);
-        }
+        long budgetTokens = Math.Max((long)Math.Floor(maxTokens * fraction), 1024);
 
         options.AdditionalProperties ??= new AdditionalPropertiesDictionary();
         options.AdditionalProperties["thinking"] = new Dictionary<string, object>
@@ -212,6 +212,24 @@ public sealed class ChatOptionsBuilder : IChatOptionsBuilder
 
     private static void BuildAnthropicCompatibleChatOptions(ChatOptions options, ReasoningEffort effort, string provider)
     {
+        string? value = effort switch
+        {
+            ReasoningEffort.Auto => null,
+            ReasoningEffort.On => null,
+            ReasoningEffort.Off => null,
+            ReasoningEffort.Low => "low",
+            ReasoningEffort.Medium => "medium",
+            ReasoningEffort.High => "high",
+            ReasoningEffort.XHigh => "xhigh",
+            ReasoningEffort.Max => "max",
+            _ => null
+        };
+
+        if (value is not null)
+        {
+            options.AdditionalProperties ??= new AdditionalPropertiesDictionary();
+            options.AdditionalProperties["reasoning_effort"] = value;
+        }
     }
 
     private static void BuildQwen3ChatOptions(ChatOptions options, ReasoningEffort effort, string provider)
@@ -231,6 +249,15 @@ public sealed class ChatOptionsBuilder : IChatOptionsBuilder
 
     private static void BuildMiniMaxChatOptions(ChatOptions options, ReasoningEffort effort, string provider)
     {
+        string? thinkingType = effort switch
+        {
+            ReasoningEffort.Off => "disabled",
+            ReasoningEffort.Auto => "adaptive",
+            _ => "enabled"
+        };
+
+        options.AdditionalProperties ??= new AdditionalPropertiesDictionary();
+        options.AdditionalProperties["thinking"] = thinkingType;
     }
 
     private static void BuildDeepseekV3ChatOptions(ChatOptions options, ReasoningEffort effort, string provider)
