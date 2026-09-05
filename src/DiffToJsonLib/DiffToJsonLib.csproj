@@ -14,26 +14,28 @@
         <Copyright>Copyright (c) Alastair Lundy 2026</Copyright>
         <RepositoryUrl>https://github.com/alastairlundy/difftojson</RepositoryUrl>
         <RepositoryType>git</RepositoryType>
-        <PackageReleaseNotes>🆕 Additions
+        <PackageReleaseNotes>## Changes since 0.5.0
 
-- Added a `Reasoning` module with per-model wire-format support: `ReasoningEffort`, `IReasoningEffortMatrix`/`ReasoningEffortMatrix`, and `IChatOptionsBuilder`/`ChatOptionsBuilder`.
-- Added `PromptSubstitutor` for template placeholder substitution.
-- Added the `AssistantMessageResult` hierarchy and `IAssistantMessageGenerator` interface for assistant message generation.
-- Added `TrainingExampleOptions` and `DisabledAssistantMessageGenerator`.
-- Added `RedactionPolicy` with commit- and string-level redaction controls.
-- Added the `TrainingExampleBuilder` core pipeline for constructing training examples.
+### All Projects
 
-⚙️ Modifications
+#### Runtime Dependencies
+- Updated `Anthropic` from 12.42.1 to 12.46.0
+- Updated `CliInvoke.Core` from 2.10.3 to 2.11.0
+- Updated `CliInvoke.Extensions` from 2.10.2 to 2.11.0
 
-- Extracted a pure `GitLogParser` state machine from `GitCommitParser`.
-- Shrunk `IGitCommitParser` and reworked `GitCommitParser` as a thin shell.
-- Refactored `LlmAssistantWriter` to implement `IAssistantMessageGenerator`.
-- Enabled `TreatWarningsAsErrors`/`CS8509` configuration in the project.
-- Added `PackageReleaseNotes` documenting the `IGitCommitParser` API shrink and raw-path redaction change.
-- Updated project dependencies to support the reasoning-effort feature.
-</PackageReleaseNotes>
+#### Testing Dependencies
+- Updated `TUnit` from 1.65.63 to 1.66.10
+- Updated `Verify` and `Verify.TUnit` from 31.28.0 to 32.0.0.
+
+#### 🆕 Additions
+- Added `DIFFTOJSON_*` environment-variable fallback for provider, API key, endpoint, and model, so secrets no longer need to be passed on the command line.
+
+#### 🐛 Bug Fixes
+- Fixed ollama-cloud authentication to send a well-formed `Authorization: Bearer &lt;key&gt;` header, and only when a key is present.
+- Fixed git output decoding to use UTF-8 instead of the system default encoding, preventing mojibake in non-ASCII commit messages and diffs.
+- Fixed `--output` resolution so a relative `&lt;file&gt;.jsonl` path is treated as a file rather than a directory.</PackageReleaseNotes>
         <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
-        <Version>0.5.0</Version>
+        <Version>0.5.1</Version>
     </PropertyGroup>
 
     <ItemGroup>

@@ -126,7 +126,7 @@ public sealed class ChatOptionsBuilder : IChatOptionsBuilder
                 ApplyNonCoTFallback(options, reasoningEffort, provider);
                 break;
         }
-
+    
         return options;
     }
 

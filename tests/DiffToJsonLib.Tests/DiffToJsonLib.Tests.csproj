@@ -7,6 +7,14 @@
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
+    <Version>0.5.1</Version>
+    <Title>DiffToJsonLib.Tests</Title>
+    <Authors>Alastair Lundy</Authors>
+    <Copyright>Copyright (c) 2026 Alastair Lundy</Copyright>
+    <RepositoryUrl>https://github.com/alastairlundy/DiffToJson/</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+    <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
   </PropertyGroup>
 
   <ItemGroup>

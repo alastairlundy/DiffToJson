@@ -10,7 +10,7 @@ A CLI for detecting and serializing Git commit Diffs and commit messages from a 
 
 This can be useful for preparing git commit diffs and message data for training AI/ML models or similar use cases.
 
-**NOTE**: Whilst the CLI implements a Regex pattern matching based PII detector for detecting email addresses in Commit Messages and redacting them, redaction of email addresses is not guaranteed. If commit messages contain sensitive information, conduct a human review of the output .JSONL file.
+**NOTE**: Whilst the CLI implements a Regex pattern matching based PII detector for detecting email addresses in commit messages and diffs (per the `--redaction` tier) and redacting them, redaction of email addresses is not guaranteed. If commit messages or diffs contain sensitive information, conduct a human review of the output .JSONL file.
 
 ## Output Formats
 
@@ -33,8 +33,8 @@ When `--format training` (default), each line of the JSONL file is a single Trai
 ```json
 {
   "messages": [
-    {"role": "system", "content": "You are a software engineer. Write a commit message for the following diff."},
-    {"role": "user", "content": "Write a commit message for the diff in the repository 'my-repo' (MIT, https://github.com/example/my-repo):\n\n<diff text>"},
+    {"role": "system", "content": "You are a software engineer. You write high-quality commit messages that follow best practices."},
+    {"role": "user", "content": "Write a commit message for the diff in the repository 'my-repo':\n<diff text>"},
     {"role": "assistant", "content": "<commit message or LLM-generated response>"}
   ],
   "provenance": {"repoName": "my-repo", "repoUrl": "https://github.com/example/my-repo"},
@@ -43,6 +43,8 @@ When `--format training` (default), each line of the JSONL file is a single Trai
 }
 ```
 
+The exact system/user text depends on the selected `--prompt-style` preset and any `--system-prompt` / `--user-prompt` overrides. The example above uses the `default` preset.
+
 | Field | Description |
 |:---|:---|
 | `messages` | Array of exactly 3 ChatML messages: system, user, assistant. |
@@ -50,7 +52,7 @@ When `--format training` (default), each line of the JSONL file is a single Trai
 | `legal` | License identifier for the record's source code. Present on every record. |
 | `originalAssistantMessage` | The original commit message preserved alongside an LLM-generated assistant message. Present **only** when `--llm-assistant-output` is enabled; absent otherwise. |
 
-See [CONTEXT.md](./CONTEXT.md) for canonical definitions of Training Example, Provenance, Legal Metadata, and Original Assistant Message.
+See [GLOSSARY.md](./GLOSSARY.md) for canonical definitions of Training Example, Provenance, Legal Metadata, and Original Assistant Message.
 
 ## Configuration & Requirements
 
@@ -59,21 +61,34 @@ See [CONTEXT.md](./CONTEXT.md) for canonical definitions of Training Example, Pr
 * **Runtime**: .NET 10 SDK is required for building and running the CLI. If running the CLI as a dotnet tool, only the .NET runtime is required.
 
 ### LLM Setup for License Detection
-To enable automatic license detection, you must provide an AI model configuration via CLI arguments:
+To enable automatic license detection, you must provide an AI model configuration via CLI arguments (or the equivalent `DIFFTOJSON_*` environment variables, see below):
 * `--model-id`: The ID of the AI model to use (Required if `--license` is not provided).
-* `--endpoint-url`: The endpoint URL of the OpenAI-compatible API (Required if `--license` is not provided).
-* `--provider`: The AI provider ID (e.g., `ollama`). If not specified, it defaults to OpenAI compatible provider mode.
-* `--api-key`: The API key for the provider (Required unless using `ollama`).
+* `--endpoint-url`: The endpoint URL of the API (Required if `--license` is not provided. Not required by the client itself for `openai`, `anthropic`, or `ollama-cloud`, but the CLI currently requires it whenever `--license` is omitted).
+* `--provider`: The AI provider ID (e.g., `ollama`). If not specified (or unknown), it defaults to OpenAI compatible provider mode (`openai-compatible`).
+* `--api-key`: The API key for the provider (Required for most providers; not required for local `ollama`; optional for `ollama-cloud` — only sent as an `Authorization: Bearer` header when provided).
+
+#### Environment variable fallback
+
+To avoid passing secrets on the command line (where they are visible in process listings), each of these flags falls back to an environment variable when the flag is empty:
+
+| Flag | Environment variable |
+|:---|:---|
+| `--provider` | `DIFFTOJSON_PROVIDER` |
+| `--api-key` | `DIFFTOJSON_API_KEY` |
+| `--endpoint-url` | `DIFFTOJSON_ENDPOINT` |
+| `--model-id` | `DIFFTOJSON_MODEL` |
+
+Explicit CLI flags take precedence over environment variables.
 
 #### Supported Providers:
 
 | AI Provider       | Endpoint Type     | Supporting NuGet Package           | CLI Provider Id to use | Notes                                                                                                                      |
 |-------------------|-------------------|------------------------------------|------------------------|----------------------------------------------------------------------------------------------------------------------------|
-| Ollama            | OpenAI Compatible | ``OllamaSharp``                    | ``ollama``             | Compatible wth Ollama Local and Ollama Cloud - Provide the desired Ollama endpoint URL. API Key required for Ollama Cloud. | 
-| Ollama Cloud        | OpenAI Compatible | ``OllamaSharp``                    | ``ollama-cloud``             | API Key is required. | 
-| OpenAI | OpenAI | ``Microsoft.Extensions.AI.OpenAI`` | ``openai``                   |  API Key is required.                                                         |
-| OpenAI Compatible | OpenAI Compatible | ``Microsoft.Extensions.AI.OpenAI`` | N/A                    | Endpoint URL is required. API Key may be required by the provider.                                                         |
-| Anthropic | Anthropic Compatible | ``Anthropic`` | ``anthropic``                    |  API Key is required.                                                         |
+| Ollama            | OpenAI Compatible | ``OllamaSharp``                    | ``ollama``             | Compatible wth Ollama Local and Ollama Cloud - Provide the desired Ollama endpoint URL. No API key required for local Ollama. | 
+| Ollama Cloud        | OpenAI Compatible | ``OllamaSharp``                    | ``ollama-cloud``             | API key is optional; when provided it is sent as an `Authorization: Bearer` header. No endpoint URL required (uses `https://ollama.com`). | 
+| OpenAI | OpenAI | ``Microsoft.Extensions.AI.OpenAI`` | ``openai``                   |  API Key is required. No endpoint URL required.                                                         |
+| OpenAI Compatible | OpenAI Compatible | ``Microsoft.Extensions.AI.OpenAI`` | ``openai-compatible`` (also the default when `--provider` is omitted or unrecognised) | Endpoint URL is required. API Key may be required by the provider.                                                         |
+| Anthropic | Anthropic Compatible | ``Anthropic`` | ``anthropic``                    |  API Key is required. No endpoint URL required.                                                         |
 | Anthropic Compatible | Anthropic Compatible | ``Anthropic`` | ``anthropic-compatible``                    | Endpoint URL is required. API Key may be required by the provider.                                                         |
 
 Alternatively, you can manually provide the license name using the `--license` flag to skip the LLM call.
@@ -171,20 +186,20 @@ diff-to-json --repo-directory "C:\path\to\your\repo" --format raw -o "C:\output\
 |:---|:---|:---|:---|:---|
 | `--repo-directory` | `DirectoryInfo` | Optional | Current directory | The local git repository directory to analyze. |
 | `--repo-url` | `string` | Optional | `""` | The URL of the git repository to include in the JSONL output. |
-| `--model-id` | `string` | Conditional | `""` | Required if `--license` is not provided. The ID of the AI model to use. |
-| ``--endpoint-url`` | `string` | Optional | `""` | Required if `--license` is not provided, or if the provider is not `openai`, `ollama-cloud`, or `anthropic`. The endpoint URL of the API. |
-| `--api-key` | `string` | Optional | `""` | The API key for the AI provider. |
-| `--provider` | `string` | Optional | `""` | The AI provider ID. See [LLM Setup](#llm-setup-for-license-detection). |
+| `--model-id` | `string` | Conditional | `""` | Required if `--license` is not provided. The ID of the AI model to use. Falls back to `DIFFTOJSON_MODEL`. |
+| ``--endpoint-url`` | `string` | Conditional | `""` | Required if `--license` is not provided. Falls back to `DIFFTOJSON_ENDPOINT`. Provider clients for `openai`, `anthropic`, and `ollama-cloud` do not need it, but the CLI currently still requires it on the license-detection path. |
+| `--api-key` | `string` | Optional | `""` | The API key for the AI provider. Falls back to `DIFFTOJSON_API_KEY`. Not required for local `ollama`; optional for `ollama-cloud`. |
+| `--provider` | `string` | Optional | `""` (defaults to `openai-compatible` behavior) | The AI provider ID. Falls back to `DIFFTOJSON_PROVIDER`. See [LLM Setup](#llm-setup-for-license-detection). |
 | `--license` | `string` | Optional | `""` | Manually specify the license name. Skips LLM license detection. |
-| `--output` / `-o` | `string` | Optional | `{repoDir}/{repoName}-commits.jsonl` | The output file path. |
+| `--output` / `-o` | `string` | Optional | `{repoDir}/{repoName}-commits.jsonl` | The output file path. If omitted, writes `{repoDir}/{repoName}-commits.jsonl`. If the value ends in `.jsonl` it is treated as a file path (relative paths resolved against the current directory); otherwise it is treated as a directory and `{repoName}-commits.jsonl` is appended. |
 | `--format` | `string` | Optional | `training` | Output format. `training` for camelCase ChatML JSONL; `raw` for legacy PascalCase JSONL. |
 | `--prompt-style` | `string` | Optional | `default` | Prompt preset name. See [Prompt Presets](#prompt-presets). |
 | `--system-prompt` | `string` | Optional | `""` (uses preset) | Override the system prompt template. Supports [placeholders](#placeholders). |
 | `--user-prompt` | `string` | Optional | `""` (uses preset) | Override the user prompt template. Supports [placeholders](#placeholders). |
 | `--llm-assistant-output` | `bool` | Optional | `false` | Enable LLM-generated assistant messages. Requires `--format training`. See [LLM Override](#llm-override). |
 | `--llm-override-prompt` | `string` | Optional | `""` (uses user prompt) | Override the prompt sent to the LLM when `--llm-assistant-output` is enabled. Supports [placeholders](#placeholders). Requires `--llm-assistant-output`. |
-| `--reasoning-effort` | `string` | Optional | `auto` | Reasoning effort level for the AI model. Valid values: `auto`, `on`, `off`, `low`, `medium`, `high`, `xhigh`, `max`. Supported values depend on provider/model. Requires `--llm-assistant-output` when set to non-`auto`. Requires `--model-id`. |
-| `--redaction` | `string` | Optional | `message` | PII redaction tier. See [Redaction Tiers](#redaction-tiers). |
+| `--reasoning-effort` | `string` | Optional | `auto` | Reasoning effort level for the AI model. Valid values: `auto`, `on`, `off`, `low`, `medium`, `high`, `xhigh`, `max`. The accepted subset depends on the model (see [Reasoning Effort](#reasoning-effort)). Non-`auto` values require `--llm-assistant-output`; using it with `--llm-assistant-output` also requires `--model-id`. |
+| `--redaction` | `string` | Optional | `message` | PII redaction tier. `message` redacts only commit messages; `diff` redacts only diffs; `all` redacts both; `none` disables redaction. See [Redaction Tiers](#redaction-tiers). |
 
 ## Cross-Option Rules
 
@@ -197,6 +212,8 @@ The following validators enforce constraints between flags:
 | `--redaction none` + `--llm-assistant-output` | **Warning** — proceeds but may expose PII in LLM output | `Warning: --redaction none combined with --llm-assistant-output may expose PII in LLM output.` |
 | `--reasoning-effort` set to non-`auto` without `--llm-assistant-output` | **Error** — reasoning effort requires LLM output enabled | `Error: --reasoning-effort requires --llm-assistant-output when set to a value other than 'auto'.` |
 | `--reasoning-effort` set without `--model-id` (with `--llm-assistant-output`) | **Error** — model ID required for reasoning effort | `Error: --reasoning-effort requires --model-id when --llm-assistant-output is enabled.` |
+| `--reasoning-effort` set to an unknown value | **Error** — invalid value; CLI lists the values supported for the given model | `Error: --reasoning-effort '<value>' is not a valid value.` + `Supported values: ...` |
+| `--reasoning-effort` set to a value the model does not support | **Error** — model-specific rejection; CLI lists the supported values | `Error: --reasoning-effort '<value>' is not supported for provider '<provider>', model '<model>'.` + `Supported values: ...` |
 
 Unknown placeholders in `--system-prompt`, `--user-prompt`, or `--llm-override-prompt` also cause an error before any records are written.
 
@@ -206,14 +223,14 @@ Available via `--prompt-style`. Each preset provides a system and user message t
 
 | Preset Name | System Prompt | User Prompt |
 |:---|:---|:---|
-| `default` | `You are a software engineer. Write a commit message for the following diff.` | `Write a commit message for the diff in the repository '{repoName}' ({license}, {repoUrl}):\n\n{diff}` |
-| `conventional` | `You are a software engineer. Write a commit message following the Conventional Commits specification.` | `Write a Conventional Commits-style commit message for the diff in '{repoName}' ({license}, {repoUrl}):\n\n{diff}` |
+| `default` | `You are a software engineer. You write high-quality commit messages that follow best practices.` | `Write a commit message for the diff in the repository '{repoName}':\n{diff}` |
+| `conventional` | `You are a software engineer. You write commit messages that follow the Conventional Commits specification.` | `Write a Conventional Commits-style commit message for the diff in '{repoName}':\n{diff}` |
 
 Overrides take precedence over the selected preset: provide `--system-prompt` or `--user-prompt` to replace the respective message entirely.
 
 ### Placeholders
 
-Placeholder tokens in prompt templates are replaced with record-specific data at serialization time. Unknown placeholders cause a CLI error.
+Placeholder tokens in prompt templates are replaced with record-specific data at serialization time. Unknown placeholders cause a CLI error. The built-in presets only use `{repoName}` and `{diff}`, but overrides (`--system-prompt`, `--user-prompt`, `--llm-override-prompt`) may use any of the following:
 
 | Placeholder | Substituted With |
 |:---|:---|
@@ -225,24 +242,39 @@ Placeholder tokens in prompt templates are replaced with record-specific data at
 
 ## Redaction Tiers
 
-Available via `--redaction`. Controls which fields are passed through the PII redactor (regex-based email redaction) before emission.
+Available via `--redaction`. Controls which stored fields are passed through the PII redactor (regex-based email redaction) before emission. Redaction is applied to the commit before prompt substitution, so the selected tier also determines what the system/user prompts contain.
 
-| Tier | CLI Value | Commit Message | Diff | LLM Output |
-|:---|:---|:---:|:---:|:---:|
-| None | `none` | — | — | — |
-| Message (default) | `message` | Redacted | — | — |
-| Diff | `diff` | Redacted | Redacted | — |
-| All | `all` | Redacted | Redacted | Redacted |
+| Tier | CLI Value | Commit Message | Diff |
+|:---|:---|:---:|:---:|
+| None | `none` | — | — |
+| Message (default) | `message` | Redacted | — |
+| Diff | `diff` | — | Redacted |
+| All | `all` | Redacted | Redacted |
+
+Note: LLM-generated assistant text is always passed through the email redactor after generation, regardless of `--redaction`. The `--redaction none` + `--llm-assistant-output` warning still applies because the unredacted diff/message is sent to the external LLM in the request.
 
 ## LLM Override
 
 When `--llm-assistant-output` is enabled, the assistant message of each Training Example is generated by an LLM at extraction time, rather than taken from the original commit message. The original message is preserved in `originalAssistantMessage` for downstream evaluation.
 
 - Requires `--format training` (see [Cross-Option Rules](#cross-option-rules)).
-- Requires AI provider configuration (`--provider`, `--model-id`, `--endpoint-url`, `--api-key`).
+- Requires AI provider configuration (`--provider`, `--model-id`, `--endpoint-url`, `--api-key`, or their `DIFFTOJSON_*` environment variable equivalents; per-provider requirements apply).
 - Use `--llm-override-prompt` to send a different prompt to the LLM than what appears in the user message.
-- On persistent LLM failure, the record is emitted with `assistant.content = null` and `originalAssistantMessage` populated.
-- When `--redaction all` is set, the LLM output is also redacted after generation.
+- The LLM is called with up to 2 retries (1s exponential backoff). Reasoning traces, when present, are embedded as `<think>...</think>` ahead of the visible text.
+- On persistent LLM failure (exception, or no assistant message in the response), the record falls back to the (redacted) original commit message for `assistant.content`, with `originalAssistantMessage` populated.
+- LLM-generated text is passed through the email redactor after generation regardless of `--redaction`.
+
+## Reasoning Effort
+
+`--reasoning-effort` accepts `auto` (default), `on`, `off`, `low`, `medium`, `high`, `xhigh`, `max`, but the accepted subset is validated per model. Unknown models only accept `auto`. Examples of known model families:
+
+- Full graduated set (`auto` + `on`/`off` + `low`/`medium`/`high`/`xhigh`/`max`): `gpt-4o`, `gpt-4.1*`, `gpt-5*` (non-chat), `claude-sonnet-4.6`/`5`, `claude-opus-4.6+`, `claude-mythos-5`, `claude-fable-5`, `qwen3.5*`.
+- Budget-based, no `xhigh`/`max`: `claude-opus-4-5`, `claude-sonnet-4-5`, `claude-haiku-4-5`.
+- Graduated without `xhigh` (allows `max`): `deepseek-v4*`.
+- Binary thinking (`auto`/`on`/`off` only): `deepseek-v3.1`, `qwen3*`, `minimax-m*`.
+- Off only (`auto`/`off`): `deepseek-chat`, `deepseek-v3`.
+
+If the value is invalid or unsupported for the given `--model-id`, the CLI exits with an error listing the supported values (see [Cross-Option Rules](#cross-option-rules)). `auto` leaves the default behavior (including default `MaxOutputTokens` of 16,000 when the model produces reasoning on `auto`, else 8,000).
 
 ## How to Build
 
@@ -268,11 +300,11 @@ Replace `[runtime-identifier]` with the appropriate RID for your platform (e.g.,
 ## Technical Details
 
 ### PII Redaction
-The tool uses a regex-based approach to detect and redact email addresses within commit messages to help prevent the leaking of personally identifiable information (PII). Due to the nature of regex, this is a best-effort implementation and does not guarantee 100% redaction.
+The tool uses a regex-based approach to detect and redact email addresses (bare addresses and `<name@domain>` forms, replaced with `REDACTED`) within commit messages and/or diffs, depending on the `--redaction` tier, to help prevent the leaking of personally identifiable information (PII). LLM-generated assistant text is additionally always redacted. Due to the nature of regex, this is a best-effort implementation and does not guarantee 100% redaction.
 For sensitive git email addresses, always conduct a human review. 
 
 ### License Detection Logic
-The tool automatically discovers license information by searching for `LICENSE.md`, `LICENSE.txt`, or `LICENSE` files in the repository root. If found, the content is sent to a configured LLM (via the configured AI provider) to extract the license name. If no file is found or the LLM cannot determine the license, it falls back to "Unknown".
+The tool automatically discovers license information by searching for `LICENSE.md`, `LICENSE.txt`, or `LICENSE` files in the repository root (in that priority order). If found, the content is sent to a configured LLM (via the configured AI provider) to extract the license name. If no file is found or the LLM cannot determine the license, it falls back to "Unknown". Provide `--license` to skip the LLM call entirely.
 
 ### Merge Commits
 
@@ -286,7 +318,6 @@ These are some things I'd like to work towards in future versions but are not gu
 
 In no particular order:
 * AWS Bedrock support
-* Support for working with ``Microsoft.Extensions.Compliance.Redaction`` to enable support for different implementations and types of PII redaction.
 
 ## Star History
 

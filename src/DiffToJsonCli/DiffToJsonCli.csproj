@@ -27,17 +27,29 @@
 This can be useful for preparing git commit diffs and message data for training AI/ML models or similar use cases.</Description>
     <Copyright>Copyright (c) Alastair Lundy 2026</Copyright>
     <PackageTags>git, diff, commit, JSONL, JSON</PackageTags>
-    <PackageReleaseNotes>🆕 Additions
+    <PackageReleaseNotes>## Changes since 0.5.0
 
-- Added the `--reasoning-effort` CLI option with per-model wire-format support (PR #12).
+### All Projects
 
-⚙️ Modifications
+#### Runtime Dependencies
+- Updated `Anthropic` from 12.42.1 to 12.46.0
+- Updated `CliInvoke.Core` from 2.10.3 to 2.11.0
+- Updated `CliInvoke.Extensions` from 2.10.2 to 2.11.0
 
-- Wired CLI composition: registered new DI types, replaced `BuildTrainingRecords` with `TrainingExampleBuilder`, and added raw-path redaction.
-- Updated `Program.cs` to generate assistant messages via the new `IAssistantMessageGenerator`.
-- Added `PackageReleaseNotes` to the project.</PackageReleaseNotes>
-    <Version>0.5.0</Version>
-    <AssemblyVersion>0.4.0.0</AssemblyVersion>
+#### Testing Dependencies
+- Updated `TUnit` from 1.65.63 to 1.66.10
+- Updated `Verify` and `Verify.TUnit` from 31.28.0 to 32.0.0.
+
+#### 🆕 Additions
+- Added `DIFFTOJSON_*` environment-variable fallback for provider, API key, endpoint, and model, so secrets no longer need to be passed on the command line.
+
+#### 🐛 Bug Fixes
+- Fixed ollama-cloud authentication to send a well-formed `Authorization: Bearer &lt;key&gt;` header, and only when a key is present.
+- Fixed git output decoding to use UTF-8 instead of the system default encoding, preventing mojibake in non-ASCII commit messages and diffs.
+- Fixed `--output` resolution so a relative `&lt;file&gt;.jsonl` path is treated as a file rather than a directory.</PackageReleaseNotes>
+    <Version>0.5.1</Version>
+    <AssemblyVersion>0.5.1.0</AssemblyVersion>
+    <FileVersion>0.5.1.0</FileVersion>
   </PropertyGroup>
 
   <PropertyGroup>
