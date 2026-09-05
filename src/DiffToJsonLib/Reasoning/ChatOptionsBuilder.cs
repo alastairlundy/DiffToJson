@@ -1,5 +1,5 @@
 using Microsoft.Extensions.AI;
-using MeaiReasoningEffort = Microsoft.Extensions.AI.ReasoningEffort;
+using MeAiReasoningEffort = Microsoft.Extensions.AI.ReasoningEffort;
 
 namespace DiffToJsonLib.Reasoning;
 
@@ -132,16 +132,16 @@ public sealed class ChatOptionsBuilder : IChatOptionsBuilder
 
     private static void BuildOpenAiChatOptions(ChatOptions options, ReasoningEffort effort, string provider)
     {
-        MeaiReasoningEffort? meaiEffort = effort switch
+        MeAiReasoningEffort? meaiEffort = effort switch
         {
-            ReasoningEffort.Auto => MeaiReasoningEffort.Low,
-            ReasoningEffort.On => MeaiReasoningEffort.Low,
+            ReasoningEffort.Auto => MeAiReasoningEffort.Low,
+            ReasoningEffort.On => MeAiReasoningEffort.Low,
             ReasoningEffort.Off => null,
-            ReasoningEffort.Low => MeaiReasoningEffort.Low,
-            ReasoningEffort.Medium => MeaiReasoningEffort.Medium,
-            ReasoningEffort.High => MeaiReasoningEffort.High,
-            ReasoningEffort.XHigh => MeaiReasoningEffort.ExtraHigh,
-            ReasoningEffort.Max => MeaiReasoningEffort.ExtraHigh,
+            ReasoningEffort.Low => MeAiReasoningEffort.Low,
+            ReasoningEffort.Medium => MeAiReasoningEffort.Medium,
+            ReasoningEffort.High => MeAiReasoningEffort.High,
+            ReasoningEffort.XHigh => MeAiReasoningEffort.ExtraHigh,
+            ReasoningEffort.Max => MeAiReasoningEffort.ExtraHigh,
             _ => null
         };
 
@@ -245,7 +245,7 @@ public sealed class ChatOptionsBuilder : IChatOptionsBuilder
         }
         else
         {
-            options.Reasoning = new ReasoningOptions { Effort = MeaiReasoningEffort.Low };
+            options.Reasoning = new ReasoningOptions { Effort = MeAiReasoningEffort.Low };
         }
     }
 
