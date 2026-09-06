@@ -1,3 +1,5 @@
+using ModelsDotDevSharp;
+
 namespace DiffToJsonLib.Reasoning;
 
 public sealed class ReasoningEffortMatrix : IReasoningEffortMatrix
@@ -121,5 +123,10 @@ public sealed class ReasoningEffortMatrix : IReasoningEffortMatrix
             return entry.ProducesReasoningOnAuto;
 
         return false;
+    }
+
+    public AIModelReasoningOptionType? GetReasoningType(string model, string provider)
+    {
+        return null;
     }
 }
