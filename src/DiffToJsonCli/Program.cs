@@ -27,6 +27,7 @@ using DiffToJsonLib.Models;
 using DiffToJsonLib.Redactors;
 using DiffToJsonLib.Writers;
 using Microsoft.Extensions.Compliance.Redaction;
+using ModelsDotDevSharp.Extensions;
 using ReasoningEffort = DiffToJsonLib.Reasoning.ReasoningEffort;
 
 HashSet<string> knownPlaceholders = new(StringComparer.OrdinalIgnoreCase)
@@ -76,7 +77,12 @@ services.AddSingleton<TrainingExampleBuilder>();
 services.AddSingleton<IDiffJsonFileWriter, DiffJsonFileWriter>();
 services.AddSingleton<IDiffTrainingJsonFileWriter, DiffTrainingJsonFileWriter>();
 services.AddSingleton<IGitCommitParser, GitCommitParser>();
-services.AddSingleton<IReasoningEffortMatrix, ReasoningEffortMatrix>();
+services.AddSingleton<CapabilityCache>();
+services.AddSingleton<IReasoningEffortMatrix>(sp =>
+{
+    var cache = sp.GetRequiredService<CapabilityCache>();
+    return new ModelsDevReasoningEffortMatrix(cache);
+});
 services.AddSingleton<IChatOptionsBuilder, ChatOptionsBuilder>();
 
 Option<DirectoryInfo> repoDirectoryOption = new("--repo-directory")
@@ -350,6 +356,11 @@ rootCommand.SetAction(async result =>
 
         IReasoningEffortMatrix matrix = serviceProvider.GetRequiredService<IReasoningEffortMatrix>();
         IChatOptionsBuilder chatOptionsBuilder = serviceProvider.GetRequiredService<IChatOptionsBuilder>();
+
+        if (matrix is ModelsDevReasoningEffortMatrix modelsDevMatrix && modelsDevMatrix.CacheStatus != CacheStatus.Fresh)
+        {
+            await Console.Error.WriteLineAsync("Warning: capability data unavailable; proceeding with auto-only fallback.");
+        }
 
         if (llmAssistantOutput && !string.IsNullOrEmpty(reasoningEffortStr))
         {

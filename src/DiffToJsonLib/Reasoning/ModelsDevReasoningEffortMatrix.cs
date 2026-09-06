@@ -29,7 +29,7 @@ public sealed class ModelsDevReasoningEffortMatrix : IReasoningEffortMatrix
         "deepseek-chat"
     };
 
-    private readonly CapabilityCache _cache;
+    private readonly CapabilityCache? _cache;
     private readonly AIProviderInfo[]? _providers;
 
     public ModelsDevReasoningEffortMatrix(CapabilityCache cache)
@@ -41,6 +41,10 @@ public sealed class ModelsDevReasoningEffortMatrix : IReasoningEffortMatrix
     {
         _providers = providers;
     }
+
+    public CacheStatus CacheStatus => _cache is null
+        ? CacheStatus.Fresh
+        : _cache.GetProviderInfosAsync().GetAwaiter().GetResult().Status;
 
     public IReadOnlySet<ReasoningEffort> GetSupportedReasoningValues(string model)
     {
@@ -86,7 +90,7 @@ public sealed class ModelsDevReasoningEffortMatrix : IReasoningEffortMatrix
 
         string normalizedModel = ModelIdNormalizer.ResolveModelId(model, availableVariants: null) ?? model;
 
-        AIProviderInfo[] providers = _providers ?? _cache.GetProviderInfosAsync().GetAwaiter().GetResult().Providers ?? [];
+        AIProviderInfo[] providers = _providers ?? _cache!.GetProviderInfosAsync().GetAwaiter().GetResult().Providers ?? [];
 
         if (string.IsNullOrWhiteSpace(provider))
             return FindModelAcrossProviders(providers, normalizedModel);
