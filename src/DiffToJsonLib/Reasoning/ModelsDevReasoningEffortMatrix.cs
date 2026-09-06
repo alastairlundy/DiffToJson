@@ -30,10 +30,16 @@ public sealed class ModelsDevReasoningEffortMatrix : IReasoningEffortMatrix
     };
 
     private readonly CapabilityCache _cache;
+    private readonly AIProviderInfo[]? _providers;
 
     public ModelsDevReasoningEffortMatrix(CapabilityCache cache)
     {
         _cache = cache;
+    }
+
+    internal ModelsDevReasoningEffortMatrix(AIProviderInfo[] providers)
+    {
+        _providers = providers;
     }
 
     public IReadOnlySet<ReasoningEffort> GetSupportedReasoningValues(string model)
@@ -80,15 +86,13 @@ public sealed class ModelsDevReasoningEffortMatrix : IReasoningEffortMatrix
 
         string normalizedModel = ModelIdNormalizer.ResolveModelId(model, availableVariants: null) ?? model;
 
+        AIProviderInfo[] providers = _providers ?? _cache.GetProviderInfosAsync().GetAwaiter().GetResult().Providers ?? [];
+
         if (string.IsNullOrWhiteSpace(provider))
-            return FindModelAcrossProviders(normalizedModel);
+            return FindModelAcrossProviders(providers, normalizedModel);
 
         if (!ModelsDevProviderMap.TryGetProviderId(provider, out string modelsDevProviderId))
-            return FindModelAcrossProviders(normalizedModel);
-
-        AIProviderInfo[]? providers = _cache.GetProviderInfosAsync().GetAwaiter().GetResult().Providers;
-        if (providers is null)
-            return null;
+            return FindModelAcrossProviders(providers, normalizedModel);
 
         AIProviderInfo? providerInfo = Array.Find(providers, p =>
             string.Equals(p.Id, modelsDevProviderId, StringComparison.OrdinalIgnoreCase));
@@ -96,12 +100,8 @@ public sealed class ModelsDevReasoningEffortMatrix : IReasoningEffortMatrix
         return FindModelInProvider(providerInfo, normalizedModel);
     }
 
-    private AIModelInfo? FindModelAcrossProviders(string normalizedModel)
+    private static AIModelInfo? FindModelAcrossProviders(AIProviderInfo[] providers, string normalizedModel)
     {
-        AIProviderInfo[]? providers = _cache.GetProviderInfosAsync().GetAwaiter().GetResult().Providers;
-        if (providers is null)
-            return null;
-
         foreach (AIProviderInfo providerInfo in providers)
         {
             AIModelInfo? found = FindModelInProvider(providerInfo, normalizedModel);

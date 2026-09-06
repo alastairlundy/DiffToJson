@@ -1,5 +1,6 @@
 using Microsoft.Extensions.AI;
 using MeAiReasoningEffort = Microsoft.Extensions.AI.ReasoningEffort;
+using ModelsDotDevSharp;
 
 namespace DiffToJsonLib.Reasoning;
 
@@ -12,69 +13,6 @@ public sealed class ChatOptionsBuilder : IChatOptionsBuilder
         _matrix = matrix;
     }
 
-    private enum ModelFamily
-    {
-        OpenAi,
-        OpenAiChatAdaptive,
-        AnthropicNew,
-        AnthropicOld,
-        AnthropicCompatible,
-        Qwen3,
-        MiniMaxM,
-        DeepseekV3,
-        DeepseekV31,
-        DeepseekV4,
-        Unknown
-    }
-
-    private static ModelFamily ClassifyModel(string model)
-    {
-        if (string.IsNullOrEmpty(model))
-            return ModelFamily.Unknown;
-
-        string lower = model.ToLowerInvariant();
-
-        if (lower == "gpt-4o" || lower == "gpt-4o-mini" ||
-            lower == "gpt-4.1" || lower == "gpt-4.1-mini" || lower == "gpt-4.1-nano" ||
-            lower == "gpt-4.5" ||
-            lower == "gpt-5" || lower == "gpt-5.1" || lower == "gpt-5.2" ||
-            lower == "gpt-5.3" || lower == "gpt-5.4" || lower == "gpt-5.5")
-            return ModelFamily.OpenAi;
-
-        if (lower.EndsWith("-chat") && (
-                lower == "gpt-5-chat" || lower == "gpt-5.1-chat" || lower == "gpt-5.2-chat" ||
-                lower == "gpt-5.3-chat" || lower == "gpt-5.4-chat" || lower == "gpt-5.5-chat"))
-            return ModelFamily.OpenAiChatAdaptive;
-
-        if (lower == "claude-sonnet-4.6" || lower == "claude-sonnet-5" ||
-            lower == "claude-opus-4.6" || lower == "claude-opus-4.7" || lower == "claude-opus-4.8" ||
-            lower == "claude-mythos-5" || lower == "claude-fable-5")
-            return ModelFamily.AnthropicNew;
-
-        if (lower == "claude-opus-4-5" || lower == "claude-sonnet-4-5" || lower == "claude-haiku-4-5")
-            return ModelFamily.AnthropicOld;
-
-        if (lower.StartsWith("claude-"))
-            return ModelFamily.AnthropicCompatible;
-
-        if (lower.StartsWith("qwen3"))
-            return ModelFamily.Qwen3;
-
-        if (lower.StartsWith("minimax-"))
-            return ModelFamily.MiniMaxM;
-
-        if (lower == "deepseek-v3" || lower == "deepseek-chat")
-            return ModelFamily.DeepseekV3;
-
-        if (lower == "deepseek-v3.1" || lower == "deepseek-v3-1")
-            return ModelFamily.DeepseekV31;
-
-        if (lower.StartsWith("deepseek-v4") || lower.StartsWith("deepseek-v4-"))
-            return ModelFamily.DeepseekV4;
-
-        return ModelFamily.Unknown;
-    }
-
     public ChatOptions BuildChatOptions(ReasoningEffort reasoningEffort, string provider, string model)
     {
         ChatOptions options = new();
@@ -83,7 +21,6 @@ public sealed class ChatOptionsBuilder : IChatOptionsBuilder
 
     internal ChatOptions BuildChatOptions(ChatOptions options, ReasoningEffort reasoningEffort, string provider, string model)
     {
-
         bool reasoningUsed = reasoningEffort switch
         {
             ReasoningEffort.Auto => _matrix.ProducesReasoningOnAuto(model),
@@ -93,49 +30,40 @@ public sealed class ChatOptionsBuilder : IChatOptionsBuilder
         int defaultMaxTokens = reasoningUsed ? 16_000 : 8_000;
         options.MaxOutputTokens ??= defaultMaxTokens;
 
-        ModelFamily family = ClassifyModel(model);
+        AIModelReasoningOptionType? reasoningType = _matrix.GetReasoningType(model, provider);
 
-        switch (family)
+        switch (reasoningType)
         {
-            case ModelFamily.OpenAi:
-                BuildOpenAiChatOptions(options, reasoningEffort, provider);
+            case AIModelReasoningOptionType.Toggle:
+                BuildToggleChatOptions(options, reasoningEffort, provider);
                 break;
-            case ModelFamily.OpenAiChatAdaptive:
-                BuildOpenAiChatAdaptive(options, reasoningEffort, provider);
+            case AIModelReasoningOptionType.BudgetTokens:
+                BuildBudgetChatOptions(options, reasoningEffort, provider);
                 break;
-            case ModelFamily.AnthropicNew:
-                BuildAnthropicNewChatOptions(options, reasoningEffort, provider);
+            case AIModelReasoningOptionType.Effort:
+                BuildEffortChatOptions(options, reasoningEffort, provider);
                 break;
-            case ModelFamily.AnthropicOld:
-                BuildAnthropicOldChatOptions(options, reasoningEffort, provider);
-                break;
-            case ModelFamily.AnthropicCompatible:
-                BuildAnthropicCompatibleChatOptions(options, reasoningEffort, provider);
-                break;
-            case ModelFamily.Qwen3:
-                BuildQwen3ChatOptions(options, reasoningEffort, provider);
-                break;
-            case ModelFamily.MiniMaxM:
-                BuildMiniMaxChatOptions(options, reasoningEffort, provider);
-                break;
-            case ModelFamily.DeepseekV3:
-                BuildDeepseekV3ChatOptions(options, reasoningEffort, provider);
-                break;
-            case ModelFamily.DeepseekV31:
-                BuildDeepseekV31ChatOptions(options, reasoningEffort, provider);
-                break;
-            case ModelFamily.DeepseekV4:
-                BuildDeepseekV4ChatOptions(options, reasoningEffort, provider);
-                break;
-            case ModelFamily.Unknown:
+            default:
                 ApplyNonCoTFallback(options, reasoningEffort, provider);
                 break;
         }
-    
+
         return options;
     }
 
-    private static void BuildOpenAiChatOptions(ChatOptions options, ReasoningEffort effort, string provider)
+    private static void BuildEffortChatOptions(ChatOptions options, ReasoningEffort effort, string provider)
+    {
+        if (string.Equals(provider, "anthropic", StringComparison.OrdinalIgnoreCase))
+        {
+            BuildAnthropicEffortChatOptions(options, effort);
+        }
+        else
+        {
+            BuildOpenAiStyleEffortChatOptions(options, effort);
+        }
+    }
+
+    private static void BuildOpenAiStyleEffortChatOptions(ChatOptions options, ReasoningEffort effort)
     {
         MeAiReasoningEffort? meaiEffort = effort switch
         {
@@ -156,12 +84,7 @@ public sealed class ChatOptionsBuilder : IChatOptionsBuilder
         }
     }
 
-    private static void BuildOpenAiChatAdaptive(ChatOptions options, ReasoningEffort effort, string provider)
-    {
-        BuildOpenAiChatOptions(options, effort, provider);
-    }
-
-    private static void BuildAnthropicNewChatOptions(ChatOptions options, ReasoningEffort effort, string provider)
+    private static void BuildAnthropicEffortChatOptions(ChatOptions options, ReasoningEffort effort)
     {
         string? value = effort switch
         {
@@ -183,13 +106,10 @@ public sealed class ChatOptionsBuilder : IChatOptionsBuilder
         }
     }
 
-    private static void BuildAnthropicOldChatOptions(ChatOptions options, ReasoningEffort effort, string provider)
+    private static void BuildBudgetChatOptions(ChatOptions options, ReasoningEffort effort, string provider)
     {
         if (effort == ReasoningEffort.Off)
         {
-            // Omit thinking block entirely — Anthropic requires budget_tokens >= 1024
-            // when thinking is enabled, so sending {type: "enabled", budget_tokens: 0}
-            // causes a 400 error.
             return;
         }
 
@@ -215,29 +135,20 @@ public sealed class ChatOptionsBuilder : IChatOptionsBuilder
         };
     }
 
-    private static void BuildAnthropicCompatibleChatOptions(ChatOptions options, ReasoningEffort effort, string provider)
+    private static void BuildToggleChatOptions(ChatOptions options, ReasoningEffort effort, string provider)
     {
-        string? value = effort switch
+        if (string.Equals(provider, "ollama", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(provider, "ollama-cloud", StringComparison.OrdinalIgnoreCase))
         {
-            ReasoningEffort.Auto => null,
-            ReasoningEffort.On => null,
-            ReasoningEffort.Off => null,
-            ReasoningEffort.Low => "low",
-            ReasoningEffort.Medium => "medium",
-            ReasoningEffort.High => "high",
-            ReasoningEffort.XHigh => "xhigh",
-            ReasoningEffort.Max => "max",
-            _ => null
-        };
-
-        if (value is not null)
+            BuildQwen3ToggleChatOptions(options, effort);
+        }
+        else
         {
-            options.AdditionalProperties ??= new AdditionalPropertiesDictionary();
-            options.AdditionalProperties["reasoning_effort"] = value;
+            BuildMiniMaxToggleChatOptions(options, effort);
         }
     }
 
-    private static void BuildQwen3ChatOptions(ChatOptions options, ReasoningEffort effort, string provider)
+    private static void BuildQwen3ToggleChatOptions(ChatOptions options, ReasoningEffort effort)
     {
         bool enableThinking = effort switch
         {
@@ -252,7 +163,7 @@ public sealed class ChatOptionsBuilder : IChatOptionsBuilder
         };
     }
 
-    private static void BuildMiniMaxChatOptions(ChatOptions options, ReasoningEffort effort, string provider)
+    private static void BuildMiniMaxToggleChatOptions(ChatOptions options, ReasoningEffort effort)
     {
         string? thinkingType = effort switch
         {
@@ -263,27 +174,6 @@ public sealed class ChatOptionsBuilder : IChatOptionsBuilder
 
         options.AdditionalProperties ??= new AdditionalPropertiesDictionary();
         options.AdditionalProperties["thinking"] = thinkingType;
-    }
-
-    private static void BuildDeepseekV3ChatOptions(ChatOptions options, ReasoningEffort effort, string provider)
-    {
-    }
-
-    private static void BuildDeepseekV31ChatOptions(ChatOptions options, ReasoningEffort effort, string provider)
-    {
-        if (effort == ReasoningEffort.Off)
-        {
-            options.Reasoning = null;
-        }
-        else
-        {
-            options.Reasoning = new ReasoningOptions { Effort = MeAiReasoningEffort.Low };
-        }
-    }
-
-    private static void BuildDeepseekV4ChatOptions(ChatOptions options, ReasoningEffort effort, string provider)
-    {
-        BuildOpenAiChatOptions(options, effort, provider);
     }
 
     private static void ApplyNonCoTFallback(ChatOptions options, ReasoningEffort effort, string provider)

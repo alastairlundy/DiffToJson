@@ -1,26 +1,14 @@
-using System.Text;
-using System.Text.Json;
 using DiffToJsonLib.Reasoning;
 using ModelsDotDevSharp;
-using ModelsDotDevSharp.Contexts;
 using ReasoningEffort = DiffToJsonLib.Reasoning.ReasoningEffort;
 
 namespace DiffToJsonLib.Tests.Reasoning;
 
 public class ModelsDevReasoningEffortMatrixTests
 {
-    private static CapabilityCache CreateCache(AIProviderInfo[] providers)
+    private static ModelsDevReasoningEffortMatrix CreateMatrix(AIProviderInfo[] providers)
     {
-        string json = JsonSerializer.Serialize(providers, ModelInfoJsonContext.Default.AIProviderInfoArray);
-        byte[] bytes = Encoding.UTF8.GetBytes(json);
-
-        var clock = new StubClock(new DateTimeOffset(2026, 6, 15, 0, 0, 0, TimeSpan.Zero));
-        var fileStore = new InMemoryFileStore();
-        var fetcher = new StubFetcher(bytes);
-        string cacheDir = Path.Combine(Path.GetTempPath(), "difftojson-matrix-tests", Guid.NewGuid().ToString("N"));
-
-        var cache = new CapabilityCache(cacheDir, clock, fileStore, fetcher);
-        return cache;
+        return new ModelsDevReasoningEffortMatrix(providers);
     }
 
     private static AIProviderInfo CreateProvider(string id, AIModelInfo[] models)
@@ -62,8 +50,7 @@ public class ModelsDevReasoningEffortMatrixTests
                 ["low", "medium", "high", "xhigh", "max"])
         });
         AIProviderInfo provider = CreateProvider("openai", [model]);
-        var cache = CreateCache([provider]);
-        var matrix = new ModelsDevReasoningEffortMatrix(cache);
+        var matrix = CreateMatrix([provider]);
 
         IReadOnlySet<ReasoningEffort> result = matrix.GetSupportedReasoningValues("gpt-4o", "openai");
 
@@ -85,8 +72,7 @@ public class ModelsDevReasoningEffortMatrixTests
                 ["low", "medium", "high"])
         });
         AIProviderInfo provider = CreateProvider("anthropic", [model]);
-        var cache = CreateCache([provider]);
-        var matrix = new ModelsDevReasoningEffortMatrix(cache);
+        var matrix = CreateMatrix([provider]);
 
         IReadOnlySet<ReasoningEffort> result = matrix.GetSupportedReasoningValues("claude-sonnet-4-5", "anthropic");
 
@@ -109,8 +95,7 @@ public class ModelsDevReasoningEffortMatrixTests
             CreateReasoningOption(AIModelReasoningOptionType.Toggle)
         });
         AIProviderInfo provider = CreateProvider("anthropic", [model]);
-        var cache = CreateCache([provider]);
-        var matrix = new ModelsDevReasoningEffortMatrix(cache);
+        var matrix = CreateMatrix([provider]);
 
         IReadOnlySet<ReasoningEffort> result = matrix.GetSupportedReasoningValues("claude-sonnet-5", "anthropic");
 
@@ -130,8 +115,7 @@ public class ModelsDevReasoningEffortMatrixTests
             CreateReasoningOption(AIModelReasoningOptionType.BudgetTokens)
         });
         AIProviderInfo provider = CreateProvider("anthropic", [model]);
-        var cache = CreateCache([provider]);
-        var matrix = new ModelsDevReasoningEffortMatrix(cache);
+        var matrix = CreateMatrix([provider]);
 
         IReadOnlySet<ReasoningEffort> result = matrix.GetSupportedReasoningValues("claude-haiku-4-5", "anthropic");
 
@@ -148,8 +132,7 @@ public class ModelsDevReasoningEffortMatrixTests
     public async Task MissingModel_ReturnsAutoOnly()
     {
         AIProviderInfo provider = CreateProvider("openai", []);
-        var cache = CreateCache([provider]);
-        var matrix = new ModelsDevReasoningEffortMatrix(cache);
+        var matrix = CreateMatrix([provider]);
 
         IReadOnlySet<ReasoningEffort> result = matrix.GetSupportedReasoningValues("nonexistent-model", "openai");
 
@@ -162,8 +145,7 @@ public class ModelsDevReasoningEffortMatrixTests
     {
         AIModelInfo model = CreateModel("some-model", false, null);
         AIProviderInfo provider = CreateProvider("openai", [model]);
-        var cache = CreateCache([provider]);
-        var matrix = new ModelsDevReasoningEffortMatrix(cache);
+        var matrix = CreateMatrix([provider]);
 
         IReadOnlySet<ReasoningEffort> result = matrix.GetSupportedReasoningValues("some-model", "openai");
 
@@ -181,8 +163,7 @@ public class ModelsDevReasoningEffortMatrixTests
             CreateReasoningOption(AIModelReasoningOptionType.Effort, ["low", "high"])
         });
         AIProviderInfo provider = CreateProvider("openai", [model]);
-        var cache = CreateCache([provider]);
-        var matrix = new ModelsDevReasoningEffortMatrix(cache);
+        var matrix = CreateMatrix([provider]);
 
         await Assert.That(matrix.ProducesReasoningOnAuto("gpt-4o", "openai")).IsTrue();
     }
@@ -195,8 +176,7 @@ public class ModelsDevReasoningEffortMatrixTests
             CreateReasoningOption(AIModelReasoningOptionType.Toggle)
         });
         AIProviderInfo provider = CreateProvider("deepseek", [model]);
-        var cache = CreateCache([provider]);
-        var matrix = new ModelsDevReasoningEffortMatrix(cache);
+        var matrix = CreateMatrix([provider]);
 
         await Assert.That(matrix.ProducesReasoningOnAuto("deepseek-chat", "deepseek")).IsFalse();
     }
@@ -211,8 +191,7 @@ public class ModelsDevReasoningEffortMatrixTests
             CreateReasoningOption(AIModelReasoningOptionType.Toggle)
         });
         AIProviderInfo provider = CreateProvider("minimax", [model]);
-        var cache = CreateCache([provider]);
-        var matrix = new ModelsDevReasoningEffortMatrix(cache);
+        var matrix = CreateMatrix([provider]);
 
         await Assert.That(matrix.ProducesReasoningOnAuto("minimax-m1", "minimax")).IsFalse();
     }
@@ -225,8 +204,7 @@ public class ModelsDevReasoningEffortMatrixTests
             CreateReasoningOption(AIModelReasoningOptionType.Toggle)
         });
         AIProviderInfo provider = CreateProvider("minimax", [model]);
-        var cache = CreateCache([provider]);
-        var matrix = new ModelsDevReasoningEffortMatrix(cache);
+        var matrix = CreateMatrix([provider]);
 
         await Assert.That(matrix.ProducesReasoningOnAuto("minimax-m3", "minimax")).IsFalse();
     }
@@ -239,8 +217,7 @@ public class ModelsDevReasoningEffortMatrixTests
             CreateReasoningOption(AIModelReasoningOptionType.Toggle)
         });
         AIProviderInfo provider = CreateProvider("deepseek", [model]);
-        var cache = CreateCache([provider]);
-        var matrix = new ModelsDevReasoningEffortMatrix(cache);
+        var matrix = CreateMatrix([provider]);
 
         await Assert.That(matrix.ProducesReasoningOnAuto("deepseek-chat", "deepseek")).IsFalse();
     }
@@ -255,8 +232,7 @@ public class ModelsDevReasoningEffortMatrixTests
             CreateReasoningOption(AIModelReasoningOptionType.Effort, ["low", "high"])
         });
         AIProviderInfo provider = CreateProvider("openai", [model]);
-        var cache = CreateCache([provider]);
-        var matrix = new ModelsDevReasoningEffortMatrix(cache);
+        var matrix = CreateMatrix([provider]);
 
         AIModelReasoningOptionType? type = matrix.GetReasoningType("gpt-4o", "openai");
 
@@ -267,8 +243,7 @@ public class ModelsDevReasoningEffortMatrixTests
     public async Task GetReasoningType_ReturnsNullForMissingModel()
     {
         AIProviderInfo provider = CreateProvider("openai", []);
-        var cache = CreateCache([provider]);
-        var matrix = new ModelsDevReasoningEffortMatrix(cache);
+        var matrix = CreateMatrix([provider]);
 
         AIModelReasoningOptionType? type = matrix.GetReasoningType("nonexistent", "openai");
 
@@ -285,8 +260,7 @@ public class ModelsDevReasoningEffortMatrixTests
             CreateReasoningOption(AIModelReasoningOptionType.Toggle)
         });
         AIProviderInfo provider = CreateProvider("ollama-cloud", [model]);
-        var cache = CreateCache([provider]);
-        var matrix = new ModelsDevReasoningEffortMatrix(cache);
+        var matrix = CreateMatrix([provider]);
 
         IReadOnlySet<ReasoningEffort> result = matrix.GetSupportedReasoningValues("qwen3", "ollama");
 
@@ -301,8 +275,7 @@ public class ModelsDevReasoningEffortMatrixTests
     public async Task UnknownProvider_FallsBackToAutoOnly()
     {
         AIProviderInfo provider = CreateProvider("openai", []);
-        var cache = CreateCache([provider]);
-        var matrix = new ModelsDevReasoningEffortMatrix(cache);
+        var matrix = CreateMatrix([provider]);
 
         IReadOnlySet<ReasoningEffort> result = matrix.GetSupportedReasoningValues("gpt-4o", "unknown-provider");
 
@@ -315,45 +288,11 @@ public class ModelsDevReasoningEffortMatrixTests
     [Test]
     public async Task EmptyCache_ReturnsAutoOnly()
     {
-        var cache = CreateCache([]);
-        var matrix = new ModelsDevReasoningEffortMatrix(cache);
+        var matrix = CreateMatrix([]);
 
         IReadOnlySet<ReasoningEffort> result = matrix.GetSupportedReasoningValues("gpt-4o", "openai");
 
         await Assert.That(result.Count).IsEqualTo(1);
         await Assert.That(result.Contains(ReasoningEffort.Auto)).IsTrue();
-    }
-
-    // --- Stub types ---
-
-    private sealed class StubClock(DateTimeOffset initial) : CapabilityCache.IClock
-    {
-        public DateTimeOffset UtcNow { get; set; } = initial;
-    }
-
-    private sealed class InMemoryFileStore : CapabilityCache.IFileStore
-    {
-        private readonly Dictionary<string, byte[]> _bytes = new(StringComparer.OrdinalIgnoreCase);
-        private readonly Dictionary<string, string> _text = new(StringComparer.OrdinalIgnoreCase);
-
-        public bool Exists(string path) => _bytes.ContainsKey(path) || _text.ContainsKey(path);
-
-        public byte[] ReadAllBytes(string path) =>
-            _bytes.TryGetValue(path, out byte[]? bytes) ? bytes : throw new FileNotFoundException(path);
-
-        public string ReadAllText(string path) =>
-            _text.TryGetValue(path, out string? text) ? text : throw new FileNotFoundException(path);
-
-        public void WriteAllBytes(string path, byte[] bytes) => _bytes[path] = bytes;
-
-        public void WriteAllText(string path, string text) => _text[path] = text;
-    }
-
-    private sealed class StubFetcher(byte[] cannedResponse) : CapabilityCache.IFetcher
-    {
-        public Task<byte[]> FetchApiJsonAsync(CancellationToken cancellationToken = default)
-        {
-            return Task.FromResult(cannedResponse);
-        }
     }
 }
