@@ -46,6 +46,7 @@
       <PackageReference Include="Anthropic" />
       <PackageReference Include="CliInvoke.Core"/>
       <PackageReference Include="Microsoft.Extensions.AI.Abstractions"/>
+      <PackageReference Include="ModelsDotDevSharp"/>
       <PackageReference Include="Microsoft.Extensions.AI.OpenAI" />
       <PackageReference Include="Microsoft.Extensions.Compliance.Redaction"/>
       <PackageReference Include="OllamaSharp" />
