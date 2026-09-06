@@ -27,7 +27,21 @@ public class RegexPiiRedactorFuzzTests
         {
             var result = redactor.Redact(input);
             await Assert.That(result).IsNotNull();
+
+            // Exercise Span overload in a separate synchronous block to avoid await boundary issues
+            VerifySpanOverload(redactor, input);
         }
+    }
+
+    private static void VerifySpanOverload(RegexPiiRedactor redactor, string input)
+    {
+        ReadOnlySpan<char> sourceSpan = input.AsSpan();
+        Span<char> destSpan = stackalloc char[Math.Max(1024, input.Length * 2)];
+        int written = redactor.Redact(sourceSpan, destSpan);
+        
+        if (written < 0) throw new Exception("Written length cannot be negative");
+        var redactedSpanResult = destSpan.Slice(0, written).ToString();
+        if (redactedSpanResult == null) throw new Exception("Redacted result cannot be null");
     }
 
     [Test]

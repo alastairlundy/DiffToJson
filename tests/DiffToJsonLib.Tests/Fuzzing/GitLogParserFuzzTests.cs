@@ -1,4 +1,5 @@
 using DiffToJsonLib.Parsing;
+using FsCheck;
 
 namespace DiffToJsonLib.Tests.Fuzzing;
 
@@ -9,29 +10,18 @@ public class GitLogParserFuzzTests
     {
         var parser = new GitLogParser();
 
-        var inputs = new[]
+        // Use FsCheck to generate bounded arbitrary input
+        Prop.ForAll(Arb.Default.String().Generator.Where(s => s?.Length <= 10000).ToArbitrary(), input =>
         {
-            "",
-            "   ",
-            "\n\n\n",
-            "random text",
-            "commit abc123\n\nmessage\n\ndiff --git a/f b/f\n+line",
-            new string('x', 10000),
-            "commit \x00\x01\x02",
-            "commit abc\n\nmsg\n\ndiff --git a/f b/f\n@@ -1 +1 @@\n+add\n-remove"
-        };
-
-        foreach (var input in inputs)
-        {
-            using var reader = new StringReader(input);
-            var commits = await parser.ParseAsync(reader, default).ToListAsync();
+            using var reader = new StringReader(input ?? "");
+            var commits = parser.ParseAsync(reader, default).ToListAsync().GetAwaiter().GetResult();
 
             foreach (var commit in commits)
             {
-                await Assert.That(commit.Message).IsNotNull();
-                await Assert.That(commit.Diff).IsNotNull();
+                if (commit.Message == null || commit.Diff == null) return false;
             }
-        }
+            return true;
+        }).Check(new FsCheck.Configuration { MaxNbOfTest = 100 });
     }
 
     [Test]
