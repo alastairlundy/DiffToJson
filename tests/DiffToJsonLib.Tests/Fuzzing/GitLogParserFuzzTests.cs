@@ -1,17 +1,17 @@
 using DiffToJsonLib.Parsing;
 using FsCheck;
+using FsCheck.Fluent;
 
 namespace DiffToJsonLib.Tests.Fuzzing;
 
 public class GitLogParserFuzzTests
 {
     [Test]
-    public async Task ParseAsync_NeverThrows_OnArbitraryInput()
+    public void ParseAsync_NeverThrows_OnArbitraryInput()
     {
         var parser = new GitLogParser();
 
-        // Use FsCheck to generate bounded arbitrary input
-        Prop.ForAll(Arb.Default.String().Generator.Where(s => s?.Length <= 10000).ToArbitrary(), input =>
+        Prop.ForAll(ArbMap.Default.GeneratorFor<string>().Where(s => s?.Length <= 10000).ToArbitrary(), input =>
         {
             using var reader = new StringReader(input ?? "");
             var commits = parser.ParseAsync(reader, default).ToListAsync().GetAwaiter().GetResult();
@@ -21,7 +21,7 @@ public class GitLogParserFuzzTests
                 if (commit.Message == null || commit.Diff == null) return false;
             }
             return true;
-        }).Check(new FsCheck.Configuration { MaxNbOfTest = 100 });
+        }).Check(Config.Default.WithMaxTest(100));
     }
 
     [Test]

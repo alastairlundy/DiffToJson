@@ -1,11 +1,39 @@
 using DiffToJsonLib.Training;
+using FsCheck;
+using FsCheck.Fluent;
 
 namespace DiffToJsonLib.Tests.Fuzzing;
 
 public class PromptSubstitutorFuzzTests
 {
     [Test]
-    public async Task Substitute_NeverThrows_OnArbitraryInput()
+    public void Substitute_NeverThrows_OnFsCheckGeneratedTemplates()
+    {
+        var gen = ArbMap.Default.GeneratorFor<string>().Where(s => s?.Length <= 10000);
+
+        Prop.ForAll(gen.ToArbitrary(), template =>
+        {
+            var result = PromptSubstitutor.Substitute(
+                template ?? "", "d", "m", "r", "l", "u");
+            return result != null;
+        }).Check(Config.Default.WithMaxTest(100));
+    }
+
+    [Test]
+    public void Substitute_NeverThrows_OnFsCheckGeneratedValues()
+    {
+        var gen = ArbMap.Default.GeneratorFor<string>().Where(s => s?.Length <= 1000);
+
+        Prop.ForAll(gen.ToArbitrary(), diff =>
+        {
+            var result = PromptSubstitutor.Substitute(
+                "{diff}{commitMessage}{repoName}", diff ?? "", "msg", "repo", "MIT", "url");
+            return result != null;
+        }).Check(Config.Default.WithMaxTest(100));
+    }
+
+    [Test]
+    public async Task Substitute_NeverThrows_OnFixedCases()
     {
         var testCases = new[]
         {

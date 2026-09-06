@@ -1,11 +1,34 @@
 using DiffToJsonLib.Redactors;
+using FsCheck;
+using FsCheck.Fluent;
 
 namespace DiffToJsonLib.Tests.Fuzzing;
 
 public class RegexPiiRedactorFuzzTests
 {
     [Test]
-    public async Task Redact_NeverThrows_OnArbitraryInput()
+    public void Redact_NeverThrows_OnFsCheckGeneratedInputs()
+    {
+        var redactor = new RegexPiiRedactor();
+
+        Prop.ForAll(ArbMap.Default.GeneratorFor<string>().ToArbitrary(), input =>
+        {
+            var result = redactor.Redact(input ?? "");
+            if (result == null) return false;
+
+            ReadOnlySpan<char> sourceSpan = (input ?? "").AsSpan();
+            Span<char> destSpan = stackalloc char[Math.Max(1024, (input ?? "").Length * 2)];
+            int written = redactor.Redact(sourceSpan, destSpan);
+            if (written < 0) return false;
+            var spanResult = destSpan.Slice(0, written).ToString();
+            if (spanResult == null) return false;
+
+            return true;
+        }).Check(Config.Default.WithMaxTest(100));
+    }
+
+    [Test]
+    public async Task Redact_NeverThrows_OnFixedInputs()
     {
         var redactor = new RegexPiiRedactor();
         var strings = new[]
@@ -28,7 +51,6 @@ public class RegexPiiRedactorFuzzTests
             var result = redactor.Redact(input);
             await Assert.That(result).IsNotNull();
 
-            // Exercise Span overload in a separate synchronous block to avoid await boundary issues
             VerifySpanOverload(redactor, input);
         }
     }
@@ -38,7 +60,7 @@ public class RegexPiiRedactorFuzzTests
         ReadOnlySpan<char> sourceSpan = input.AsSpan();
         Span<char> destSpan = stackalloc char[Math.Max(1024, input.Length * 2)];
         int written = redactor.Redact(sourceSpan, destSpan);
-        
+
         if (written < 0) throw new Exception("Written length cannot be negative");
         var redactedSpanResult = destSpan.Slice(0, written).ToString();
         if (redactedSpanResult == null) throw new Exception("Redacted result cannot be null");
