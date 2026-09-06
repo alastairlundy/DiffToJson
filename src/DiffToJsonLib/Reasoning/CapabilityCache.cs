@@ -16,11 +16,15 @@ public sealed record CapabilityCacheResult(AIProviderInfo[]? Providers, CacheSta
 public sealed class CapabilityCache
 {
     private static readonly TimeSpan TimeToLive = TimeSpan.FromHours(24);
+    private static readonly TimeSpan NegativeCacheTtl = TimeSpan.FromMinutes(5);
 
     private readonly string _cacheDirectory;
     private readonly IClock _clock;
     private readonly IFileStore _fileStore;
     private readonly IFetcher _fetcher;
+    private readonly Lock _memoryLock = new();
+    private CapabilityCacheResult? _memoryResult;
+    private DateTimeOffset _memoryResultTime;
 
     public CapabilityCache(string? cacheDirectory = null, IClock? clock = null, IFileStore? fileStore = null, IFetcher? fetcher = null)
     {
@@ -35,31 +39,72 @@ public sealed class CapabilityCache
 
     public async Task<CapabilityCacheResult> GetProviderInfosAsync(CancellationToken cancellationToken = default)
     {
-        AIProviderInfo[]? providers = TryLoadFromCache();
-        DateTimeOffset? fetchTime = TryLoadFetchTimestamp();
+        DateTimeOffset now = _clock.UtcNow;
 
-        if (fetchTime.HasValue && _clock.UtcNow - fetchTime.Value < TimeToLive && providers is not null)
+        lock (_memoryLock)
         {
-            return new CapabilityCacheResult(providers, CacheStatus.Fresh);
+            if (_memoryResult is not null)
+            {
+                TimeSpan cooldown = _memoryResult.Status == CacheStatus.Fresh ? TimeToLive : NegativeCacheTtl;
+                if (now - _memoryResultTime < cooldown)
+                {
+                    return _memoryResult;
+                }
+            }
+        }
+
+        DateTimeOffset? fetchTime = TryLoadFetchTimestamp();
+        bool diskFresh = fetchTime.HasValue && now - fetchTime.Value < TimeToLive;
+
+        if (diskFresh)
+        {
+            AIProviderInfo[]? cached = TryLoadFromCache();
+            if (cached is not null)
+            {
+                return StoreInMemory(new CapabilityCacheResult(cached, CacheStatus.Fresh), now);
+            }
+            // Fresh timestamp but missing/corrupt payload: fall through to fetch.
         }
 
         try
         {
             byte[] bytes = await _fetcher.FetchApiJsonAsync(cancellationToken).ConfigureAwait(false);
+            // Validate before evicting the good stale copy (deserialize-first).
+            AIProviderInfo[]? parsed = Deserialize(bytes);
+            if (parsed is null)
+            {
+                throw new InvalidOperationException("Fetched capability payload deserialized to null.");
+            }
+
             SaveToCache(bytes);
             SaveFetchTimestamp(_clock.UtcNow);
-            providers = Deserialize(bytes);
-            return new CapabilityCacheResult(providers, CacheStatus.Fresh);
+            return StoreInMemory(new CapabilityCacheResult(parsed, CacheStatus.Fresh), _clock.UtcNow);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch
         {
-            if (providers is not null)
+            AIProviderInfo[]? stale = TryLoadFromCache();
+            if (stale is not null)
             {
-                return new CapabilityCacheResult(providers, CacheStatus.Stale);
+                return StoreInMemory(new CapabilityCacheResult(stale, CacheStatus.Stale), now);
             }
 
-            return new CapabilityCacheResult(null, CacheStatus.Unavailable);
+            return StoreInMemory(new CapabilityCacheResult(null, CacheStatus.Unavailable), now);
         }
+    }
+
+    private CapabilityCacheResult StoreInMemory(CapabilityCacheResult result, DateTimeOffset timestamp)
+    {
+        lock (_memoryLock)
+        {
+            _memoryResult = result;
+            _memoryResultTime = timestamp;
+        }
+
+        return result;
     }
 
     private AIProviderInfo[]? TryLoadFromCache()
@@ -171,7 +216,10 @@ internal sealed class HttpClientFetcher : CapabilityCache.IFetcher
 {
     private const string ApiUrl = "https://models.dev/api.json";
 
-    private static readonly HttpClient SharedHttpClient = new();
+    private static readonly HttpClient SharedHttpClient = new()
+    {
+        Timeout = TimeSpan.FromSeconds(10)
+    };
 
     public async Task<byte[]> FetchApiJsonAsync(CancellationToken cancellationToken = default)
     {

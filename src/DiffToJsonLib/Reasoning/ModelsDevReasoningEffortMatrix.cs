@@ -14,6 +14,10 @@ public sealed class ModelsDevReasoningEffortMatrix : IReasoningEffortMatrix
         ReasoningEffort.Auto, ReasoningEffort.On, ReasoningEffort.Off
     };
 
+    // Intentional per D012/T005: BudgetTokens Type carries no values list, so the
+    // catalog-driven set is {Auto,On,Off,Low}. BuildBudgetChatOptions retains
+    // Medium/High fractions for forward compatibility, but validation currently
+    // restricts pure BudgetTokens models to this set.
     private static readonly HashSet<ReasoningEffort> BudgetSet = new()
     {
         ReasoningEffort.Auto, ReasoningEffort.On, ReasoningEffort.Off,
@@ -42,9 +46,39 @@ public sealed class ModelsDevReasoningEffortMatrix : IReasoningEffortMatrix
         _providers = providers;
     }
 
+    /// <summary>
+    /// Synchronous status probe. Blocks on cache I/O; prefer
+    /// <see cref="GetCacheStatusAsync"/> in async paths.
+    /// </summary>
     public CacheStatus CacheStatus => _cache is null
         ? CacheStatus.Fresh
         : _cache.GetProviderInfosAsync().GetAwaiter().GetResult().Status;
+
+    public Task<CacheStatus> GetCacheStatusAsync(CancellationToken cancellationToken = default)
+    {
+        if (_cache is null)
+        {
+            return Task.FromResult(CacheStatus.Fresh);
+        }
+
+        return GetCacheStatusCoreAsync(cancellationToken);
+    }
+
+    private async Task<CacheStatus> GetCacheStatusCoreAsync(CancellationToken cancellationToken)
+    {
+        CapabilityCacheResult result = await _cache!.GetProviderInfosAsync(cancellationToken).ConfigureAwait(false);
+        return result.Status;
+    }
+
+    public Task WarmUpAsync(CancellationToken cancellationToken = default)
+    {
+        if (_cache is null || _providers is not null)
+        {
+            return Task.CompletedTask;
+        }
+
+        return _cache.GetProviderInfosAsync(cancellationToken);
+    }
 
     public IReadOnlySet<ReasoningEffort> GetSupportedReasoningValues(string model)
     {
@@ -67,7 +101,12 @@ public sealed class ModelsDevReasoningEffortMatrix : IReasoningEffortMatrix
 
     public bool ProducesReasoningOnAuto(string model, string provider)
     {
-        if (AutoExceptions.Contains(model))
+        if (string.IsNullOrWhiteSpace(model))
+            return false;
+
+        string normalizedForExceptionCheck = ModelIdNormalizer.ResolveModelId(model, availableVariants: null)?.Trim()
+            ?? model.Trim();
+        if (AutoExceptions.Contains(normalizedForExceptionCheck))
             return false;
 
         AIModelInfo? modelInfo = FindModel(model, provider);
@@ -88,9 +127,27 @@ public sealed class ModelsDevReasoningEffortMatrix : IReasoningEffortMatrix
         if (string.IsNullOrWhiteSpace(model))
             return null;
 
-        string normalizedModel = ModelIdNormalizer.ResolveModelId(model, availableVariants: null) ?? model;
-
         AIProviderInfo[] providers = _providers ?? _cache!.GetProviderInfosAsync().GetAwaiter().GetResult().Providers ?? [];
+
+        // Variant-aware per D005: translate size suffixes (qwen3.5:9b -> qwen3.5-9b)
+        // only when the dash variant exists in the catalog; otherwise fall back
+        // gracefully to the stripped id (never fabricated).
+        HashSet<string> variants = new(StringComparer.OrdinalIgnoreCase);
+        foreach (AIProviderInfo catalogProvider in providers)
+        {
+            if (catalogProvider.Models is null)
+                continue;
+
+            foreach (AIModelInfo candidate in catalogProvider.Models)
+            {
+                if (!string.IsNullOrWhiteSpace(candidate.Id))
+                    variants.Add(candidate.Id);
+            }
+        }
+
+        string normalizedModel = ModelIdNormalizer.ResolveModelId(model, variants)
+            ?? ModelIdNormalizer.ResolveModelId(model, availableVariants: null)
+            ?? model.Trim();
 
         if (string.IsNullOrWhiteSpace(provider))
             return FindModelAcrossProviders(providers, normalizedModel);

@@ -357,9 +357,20 @@ rootCommand.SetAction(async result =>
         IReasoningEffortMatrix matrix = serviceProvider.GetRequiredService<IReasoningEffortMatrix>();
         IChatOptionsBuilder chatOptionsBuilder = serviceProvider.GetRequiredService<IChatOptionsBuilder>();
 
-        if (matrix is ModelsDevReasoningEffortMatrix modelsDevMatrix && modelsDevMatrix.CacheStatus != CacheStatus.Fresh)
+        // Only touch the capability cache when reasoning is actually needed,
+        // so --format raw and non-LLM runs never pay for network/file I/O.
+        if (llmAssistantOutput && !string.IsNullOrEmpty(reasoningEffortStr)
+            && matrix is ModelsDevReasoningEffortMatrix modelsDevMatrix)
         {
-            await Console.Error.WriteLineAsync("Warning: capability data unavailable; proceeding with auto-only fallback.");
+            CacheStatus status = await modelsDevMatrix.GetCacheStatusAsync();
+            if (status == CacheStatus.Unavailable)
+            {
+                await Console.Error.WriteLineAsync("Warning: capability data unavailable; proceeding with auto-only fallback.");
+            }
+            else if (status == CacheStatus.Stale)
+            {
+                await Console.Error.WriteLineAsync("Warning: capability data is stale; proceeding with cached capability data.");
+            }
         }
 
         if (llmAssistantOutput && !string.IsNullOrEmpty(reasoningEffortStr))

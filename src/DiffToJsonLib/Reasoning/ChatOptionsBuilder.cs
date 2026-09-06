@@ -53,7 +53,8 @@ public sealed class ChatOptionsBuilder : IChatOptionsBuilder
 
     private static void BuildEffortChatOptions(ChatOptions options, ReasoningEffort effort, string provider)
     {
-        if (string.Equals(provider, "anthropic", StringComparison.OrdinalIgnoreCase))
+        string canonical = ModelsDevProviderMap.Normalize(provider);
+        if (string.Equals(canonical, "anthropic", StringComparison.OrdinalIgnoreCase))
         {
             BuildAnthropicEffortChatOptions(options, effort);
         }
@@ -137,10 +138,21 @@ public sealed class ChatOptionsBuilder : IChatOptionsBuilder
 
     private static void BuildToggleChatOptions(ChatOptions options, ReasoningEffort effort, string provider)
     {
-        if (string.Equals(provider, "ollama", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(provider, "ollama-cloud", StringComparison.OrdinalIgnoreCase))
+        // Type-driven per T005: Toggle maps to the nearest on/off builder.
+        // Ollama/Qwen3 uses chat_template_kwargs; MiniMax, DeepSeek and other
+        // Toggle providers use the MiniMax-style thinking string (adaptive/enabled/disabled).
+        string canonical = ModelsDevProviderMap.Normalize(provider);
+        if (string.Equals(canonical, "ollama-cloud", StringComparison.OrdinalIgnoreCase))
         {
             BuildQwen3ToggleChatOptions(options, effort);
+        }
+        else if (string.Equals(canonical, "minimax", StringComparison.OrdinalIgnoreCase) ||
+                 string.Equals(canonical, "deepseek", StringComparison.OrdinalIgnoreCase) ||
+                 string.Equals(canonical, "anthropic", StringComparison.OrdinalIgnoreCase) ||
+                 string.Equals(canonical, "openai", StringComparison.OrdinalIgnoreCase) ||
+                 string.Equals(canonical, "openrouter", StringComparison.OrdinalIgnoreCase))
+        {
+            BuildMiniMaxToggleChatOptions(options, effort);
         }
         else
         {

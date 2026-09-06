@@ -2,6 +2,7 @@ using ModelsDotDevSharp;
 
 namespace DiffToJsonLib.Reasoning;
 
+[Obsolete("Use ModelsDevReasoningEffortMatrix (models.dev-backed) instead. This hardcoded fallback is retained only for tests and will be removed. Do not register it in DI for production paths.")]
 public sealed class ReasoningEffortMatrix : IReasoningEffortMatrix
 {
     private static readonly HashSet<ReasoningEffort> FullSet = new()
