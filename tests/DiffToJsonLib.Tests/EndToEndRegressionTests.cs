@@ -1,4 +1,3 @@
-using System.Runtime.CompilerServices;
 using System.Text.Json;
 using DiffToJsonLib.Abstractions;
 using DiffToJsonLib.Contexts;
@@ -68,6 +67,22 @@ public class EndToEndRegressionTests
         }
     }
 
+    private static string ExpectedPath(string testName) =>
+        Path.GetFullPath(Path.Combine(
+            AppContext.BaseDirectory, "..", "..", "..", "..", "..",
+            "tests", "DiffToJsonLib.Tests", $"EndToEndRegressionTests.{testName}.verified.txt"
+        ));
+
+    private static string NormalizeLineEndings(string value) =>
+        value.Replace("\r\n", "\n").Replace("\r", "\n");
+
+    private static async Task AssertMatchesGoldenFileAsync(string actualJsonl, string testName)
+    {
+        string expected = NormalizeLineEndings(await File.ReadAllTextAsync(ExpectedPath(testName)));
+        string actual = NormalizeLineEndings(actualJsonl);
+        await Assert.That(actual).IsEqualTo(expected);
+    }
+
     private static RedactionPolicy CreateEmptyPolicy()
     {
         return new RedactionPolicy(new Dictionary<RedactionTier, Redactor>());
@@ -94,7 +109,7 @@ public class EndToEndRegressionTests
             JsonSerializer.Serialize(r, CommitTrainingJsonContext.Default.CommitTrainingRecord));
         var actualJsonl = string.Join(Environment.NewLine, jsonLines);
 
-        await Verify(actualJsonl);
+        await AssertMatchesGoldenFileAsync(actualJsonl, nameof(TrainingPath));
     }
 
     [Test]
@@ -118,6 +133,6 @@ public class EndToEndRegressionTests
             JsonSerializer.Serialize(r, CommitTrainingJsonContext.Default.CommitTrainingRecord));
         var actualJsonl = string.Join(Environment.NewLine, jsonLines);
 
-        await Verify(actualJsonl);
+        await AssertMatchesGoldenFileAsync(actualJsonl, nameof(LlmFailurePath));
     }
 }
