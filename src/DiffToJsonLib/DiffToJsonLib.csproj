@@ -50,7 +50,7 @@
       <PackageReference Include="Microsoft.Extensions.AI.OpenAI" />
       <PackageReference Include="Microsoft.Extensions.Compliance.Redaction"/>
       <PackageReference Include="OllamaSharp" />
-      <PackageReference Include="Polly" />
+      <PackageReference Include="Kevlar" />
     </ItemGroup>
 
 </Project>

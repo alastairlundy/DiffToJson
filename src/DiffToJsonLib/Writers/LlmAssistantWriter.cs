@@ -18,9 +18,8 @@ using DiffToJsonLib.Models;
 using DiffToJsonLib.Redactors;
 using DiffToJsonLib.Training;
 using DiffToJsonLib.Training.Abstractions;
+using Kevlar;
 using Microsoft.Extensions.AI;
-using Polly;
-using Polly.Retry;
 
 namespace DiffToJsonLib.Writers;
 
@@ -28,21 +27,14 @@ public class LlmAssistantWriter : IAssistantMessageGenerator
 {
     private readonly Lazy<IChatClient> _clientLazy;
     private readonly RedactionPolicy _policy;
-    private readonly ResiliencePipeline _pipeline;
+    private readonly Shield _pipeline;
 
     public LlmAssistantWriter(IChatClientFactory chatClientFactory, RedactionPolicy policy)
     {
         _clientLazy = new Lazy<IChatClient>(chatClientFactory.Create);
         _policy = policy;
-        _pipeline = new ResiliencePipelineBuilder()
-            .AddRetry(new RetryStrategyOptions
-            {
-                MaxRetryAttempts = 2,
-                Delay = TimeSpan.FromSeconds(1),
-                BackoffType = DelayBackoffType.Exponential,
-                UseJitter = false
-            })
-            .Build();
+        _pipeline = Shield.Retry(2,
+            Backoff.Exponential(TimeSpan.FromSeconds(1), jitter: Jitter.None));
     }
 
     public async Task<AssistantMessageResult> GenerateAsync(
