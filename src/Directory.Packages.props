@@ -3,20 +3,20 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="Anthropic" Version="12.46.0" />
     <PackageVersion Include="CliInvoke.Core" Version="2.11.0" />
+    <PackageVersion Include="Anthropic" Version="12.48.0" />
     <PackageVersion Include="FsCheck" Version="3.4.0" />
     <PackageVersion Include="CliInvoke.Extensions" Version="2.11.0" />
-    <PackageVersion Include="Microsoft.Extensions.AI.Abstractions" Version="10.9.0" />
-    <PackageVersion Include="ModelsDotDevSharp" Version="0.1.0" />
-    <PackageVersion Include="Microsoft.Extensions.AI.OpenAI" Version="10.9.0" />
-    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.11" />
-    <PackageVersion Include="Microsoft.Extensions.Compliance.Redaction" Version="10.9.0" />
+    <PackageVersion Include="Microsoft.Extensions.AI.Abstractions" Version="10.10.0" />
+    <PackageVersion Include="ModelsDotDevSharp" Version="0.2.0" />
+    <PackageVersion Include="Microsoft.Extensions.AI.OpenAI" Version="10.10.0" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.12" />
+    <PackageVersion Include="Microsoft.Extensions.Compliance.Redaction" Version="10.10.0" />
     <PackageVersion Include="OllamaSharp" Version="5.4.30" />
-    <PackageVersion Include="Polly" Version="8.7.0" />
-    <PackageVersion Include="System.CommandLine" Version="2.0.11" />
-    <PackageVersion Include="TUnit" Version="1.66.10" />
-    <PackageVersion Include="Verify" Version="32.0.0" />
-    <PackageVersion Include="Verify.TUnit" Version="32.0.0" />
+    <PackageVersion Include="Polly" Version="8.8.0" />
+    <PackageVersion Include="System.CommandLine" Version="2.0.12" />
+    <PackageVersion Include="TUnit" Version="1.68.4" />
+    <PackageVersion Include="Verify" Version="33.0.2" />
+    <PackageVersion Include="Verify.TUnit" Version="33.0.2" />
   </ItemGroup>
 </Project>
