@@ -29,12 +29,20 @@ public class GitCommitParser : IGitCommitParser
         _processInvoker = processInvoker;
     }
 
-    private async Task<PipedProcessResult> GetDiffsAsync(string workingDir, CancellationToken cancellationToken)
+    private async Task<string> GetDiffsAsync(string workingDir, CancellationToken cancellationToken)
     {
-        using ProcessConfiguration processConfiguration = new(OperatingSystem.IsWindows() ? "git.exe" : "git",
-            "--no-pager log -p", workingDir);
-        
-        return await _processInvoker.ExecutePipedAsync(processConfiguration, cancellationToken: cancellationToken);
+        ProcessConfiguration processConfiguration = new()
+        {
+            TargetFilePath = OperatingSystem.IsWindows() ? "git.exe" : "git",
+            Arguments = "--no-pager log -p",
+            WorkingDirectoryPath = workingDir,
+            OutputRedirection = true,
+        };
+
+        BufferedProcessResult processResult = await _processInvoker.ExecuteBufferedAsync(processConfiguration,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+
+        return processResult.StandardOutput ?? string.Empty;
     }
     
     public async Task<CommitRecord[]> ParseCommitsToArrayAsync(string repoName, string license,
@@ -47,10 +55,9 @@ public class GitCommitParser : IGitCommitParser
     public async IAsyncEnumerable<CommitRecord> ParseCommitsStreamAsync(string repoName, string license, string workingDir,
         string repoUrl, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        await using PipedProcessResult processResult = await GetDiffsAsync(workingDir, cancellationToken).ConfigureAwait(false);
+        string gitOutput = await GetDiffsAsync(workingDir, cancellationToken).ConfigureAwait(false);
 
-        processResult.StandardOutput.Position = 0;
-        using StreamReader reader = new(processResult.StandardOutput, Encoding.UTF8);
+        using StringReader reader = new(gitOutput);
 
         GitLogParser gitLogParser = new();
 
