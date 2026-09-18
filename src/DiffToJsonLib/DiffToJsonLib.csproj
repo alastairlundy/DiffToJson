@@ -35,7 +35,7 @@
 - Fixed git output decoding to use UTF-8 instead of the system default encoding, preventing mojibake in non-ASCII commit messages and diffs.
 - Fixed `--output` resolution so a relative `&lt;file&gt;.jsonl` path is treated as a file rather than a directory.</PackageReleaseNotes>
         <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
-        <Version>0.5.1</Version>
+        <Version>0.6.0</Version>
     </PropertyGroup>
 
     <ItemGroup>

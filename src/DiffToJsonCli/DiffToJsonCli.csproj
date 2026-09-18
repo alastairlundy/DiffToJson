@@ -27,29 +27,38 @@
 This can be useful for preparing git commit diffs and message data for training AI/ML models or similar use cases.</Description>
     <Copyright>Copyright (c) Alastair Lundy 2026</Copyright>
     <PackageTags>git, diff, commit, JSONL, JSON</PackageTags>
-    <PackageReleaseNotes>## Changes since 0.5.0
+    <PackageReleaseNotes>## Changes since 0.5.1
+### Added
+- Added a models.dev-backed reasoning effort matrix. It looks up capabilities per provider and derives support from the option type (Effort, Toggle, BudgetTokens). MiniMax M-series and deepseek-chat stay on a small exceptions-only auto table.
+- Added an offline-tolerant cache for models.dev data. It has a 24-hour TTL with stale-serve fallback and AOT-safe deserialization. Runs never block when capability data is unavailable.
+- Added source key resolution components (model ID normalization and models.dev provider mapping) for cross-provider capability lookups.
+- The CLI now uses the models.dev-backed matrix. When capability data is missing it prints a one-line stderr warning and falls back to auto-only.
+- Added property-based fuzz tests (FsCheck) covering Git log parsing, PII redaction, prompt substitution, and commit record serialization.
 
-### All Projects
+### Changed
+- Dropped per-model family classification. Dispatch now follows the reasoning option type: Toggle, BudgetTokens, or Effort.
+- Migrated process execution from the CliInvoke v2 API to the CliInvoke v3 buffered API.
+- Replaced Polly with Kevlar for LLM retry resilience.
+- Replaced Verify snapshot assertions with plain TUnit assertions in end-to-end regression tests. Snapshot files are pinned to LF line endings.
+- Updated glossary documentation.
+- **Runtime Dependencies**: added `ModelsDotDevSharp` 0.2.0 and `Kevlar` 1.1.1; `CliInvoke.Core` 2.11.0 to 3.0.0 (replaced `CliInvoke.Extensions` with `CliInvoke` 3.0.0); `Anthropic` 12.46.0 to 12.48.0; `Microsoft.Extensions.AI.Abstractions` 10.9.0 to 10.10.0; `Microsoft.Extensions.AI.OpenAI` 10.9.0 to 10.10.0; `Microsoft.Extensions.Compliance.Redaction` 10.9.0 to 10.10.0; `Microsoft.Extensions.DependencyInjection` 10.0.11 to 10.0.12; `System.CommandLine` 2.0.11 to 2.0.12.
+- **Testing Dependencies**: added `FsCheck` 3.4.0; `TUnit` 1.66.10 to 1.68.4; removed `Verify` and `Verify.TUnit`.
 
-#### Runtime Dependencies
-- Updated `Anthropic` from 12.42.1 to 12.46.0
-- Updated `CliInvoke.Core` from 2.10.3 to 2.11.0
-- Updated `CliInvoke.Extensions` from 2.10.2 to 2.11.0
+### Removed
+- Removed the `ModelFamily` enum and per-family `ClassifyModel` API. Type-driven dispatch covers it.
+- Removed the `Polly` dependency, replaced by `Kevlar`.
+- Removed the `Verify` and `Verify.TUnit` snapshot-testing dependencies in favor of plain TUnit assertions.
 
-#### Testing Dependencies
-- Updated `TUnit` from 1.65.63 to 1.66.10
-- Updated `Verify` and `Verify.TUnit` from 31.28.0 to 32.0.0.
+### Fixed
+- Fixed the Anthropic (old) reasoning-off path to omit the thinking block instead of sending `budget_tokens: 0`. Budget values now clamp to the 1024 minimum Anthropic requires.
+- Filled in the `ChatOptionsBuilder` placeholder methods with working builders for OpenAI adaptive, Anthropic-compatible, and MiniMax thinking toggle/adaptive shapes.
+- Hardened the capability cache, made startup non-blocking when capability data is missing, and fixed model ID normalization and dispatch.
+- Fixed Verify snapshot line-ending failures on Windows.
 
-#### 🆕 Additions
-- Added `DIFFTOJSON_*` environment-variable fallback for provider, API key, endpoint, and model, so secrets no longer need to be passed on the command line.
-
-#### 🐛 Bug Fixes
-- Fixed ollama-cloud authentication to send a well-formed `Authorization: Bearer &lt;key&gt;` header, and only when a key is present.
-- Fixed git output decoding to use UTF-8 instead of the system default encoding, preventing mojibake in non-ASCII commit messages and diffs.
-- Fixed `--output` resolution so a relative `&lt;file&gt;.jsonl` path is treated as a file rather than a directory.</PackageReleaseNotes>
-    <Version>0.5.1</Version>
-    <AssemblyVersion>0.5.1.0</AssemblyVersion>
-    <FileVersion>0.5.1.0</FileVersion>
+[0.6.0]: https://github.com/alastairlundy/DiffToJson/compare/0.5.1...0.6.0</PackageReleaseNotes>
+    <Version>0.6.0</Version>
+    <AssemblyVersion>0.6.0.0</AssemblyVersion>
+    <FileVersion>0.6.0.0</FileVersion>
   </PropertyGroup>
 
   <PropertyGroup>
