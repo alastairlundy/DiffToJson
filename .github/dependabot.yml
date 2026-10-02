@@ -6,7 +6,9 @@
 version: 2
 updates:
   - package-ecosystem: "nuget"
-    directory: "/" # Location of package manifests
+    directories:
+      - "src" # Location of package manifests
+      - "tests"
     schedule:
       interval: "weekly"
       
