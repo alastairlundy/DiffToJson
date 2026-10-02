@@ -3,17 +3,17 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="CliInvoke.Core" Version="3.0.0" />
-    <PackageVersion Include="CliInvoke" Version="3.0.0" />
+    <PackageVersion Include="CliInvoke" Version="3.0.2" />
+    <PackageVersion Include="CliInvoke.Core" Version="3.0.2" />
     <PackageVersion Include="Anthropic" Version="12.53.0" />
     <PackageVersion Include="FsCheck" Version="3.4.0" />
-    <PackageVersion Include="Microsoft.Extensions.AI.Abstractions" Version="10.10.0" />
+    <PackageVersion Include="Microsoft.Extensions.AI.Abstractions" Version="10.10.1" />
     <PackageVersion Include="ModelsDotDevSharp" Version="0.2.0" />
     <PackageVersion Include="Microsoft.Extensions.AI.OpenAI" Version="10.10.0" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.12" />
     <PackageVersion Include="Microsoft.Extensions.Compliance.Redaction" Version="10.10.0" />
     <PackageVersion Include="OllamaSharp" Version="5.4.30" />
-    <PackageVersion Include="Kevlar" Version="1.1.1" />
+    <PackageVersion Include="Kevlar" Version="1.3.0" />
     <PackageVersion Include="System.CommandLine" Version="2.0.12" />
     <PackageVersion Include="TUnit" Version="1.68.4" />
   </ItemGroup>
