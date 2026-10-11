@@ -15,45 +15,16 @@
  */
 
 using System.CommandLine;
-using System.Runtime.CompilerServices;
-using System.Text.RegularExpressions;
 using CliInvoke.Extensions;
 using DiffToJsonCli.Execution;
-using DiffToJsonLib.Prompts;
 using DiffToJsonLib.Training;
 using DiffToJsonLib.Training.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 using DiffToJsonLib.Reasoning;
-using DiffToJsonLib.Models;
 using DiffToJsonLib.Redactors;
 using DiffToJsonLib.Writers;
 using Microsoft.Extensions.Compliance.Redaction;
 using ModelsDotDevSharp.Extensions;
-using ReasoningEffort = DiffToJsonLib.Reasoning.ReasoningEffort;
-
-HashSet<string> knownPlaceholders = new(StringComparer.OrdinalIgnoreCase)
-{
-    "diff", "commitMessage", "repoName", "license", "repoUrl"
-};
-
-Regex placeholderPattern = new(@"\{(\w+)\}", RegexOptions.Compiled);
-
-string? ValidatePlaceholders(string value)
-{
-    if (string.IsNullOrEmpty(value)) return null;
-
-    MatchCollection matches = placeholderPattern.Matches(value);
-    foreach (Match match in matches)
-    {
-        string name = match.Groups[1].Value;
-        if (!knownPlaceholders.Contains(name))
-        {
-            return $"Unknown placeholder '{{{name}}}'. Valid placeholders: {string.Join(", ", knownPlaceholders.Select(p => $"{{{p}}}"))}.";
-        }
-    }
-
-    return null;
-}
 
 IServiceCollection services = new ServiceCollection();
 
@@ -196,7 +167,7 @@ Option<string> redactionOption = new("--redaction")
 };
 redactionOption.AcceptOnlyFromAmong("message", "diff", "all", "none");
 
-RootCommand rootCommand = new("Detects and Serializes Git Diffs and Commits to a .JSONL file.")
+RootCommand rootCommand = new("Detects and Serializes Git Diffs and Commits to a .JSONL file. Exit codes: 0 on success, 1 on run failures and unexpected errors, 2 on usage errors.")
 {
     repoDirectoryOption,
     repoUrlOption,
@@ -216,262 +187,120 @@ RootCommand rootCommand = new("Detects and Serializes Git Diffs and Commits to a
     redactionOption
 };
 
-rootCommand.SetAction(async result =>
+rootCommand.SetAction(async (result, invocationToken) =>
 {
+    // Bind raw option values without applying fallback.
+    DirectoryInfo? repoDirectoryValue = result.GetValue(repoDirectoryOption);
+    string repoUrl = result.GetValue(repoUrlOption) ?? "";
+    string license = result.GetValue(licenseOption) ?? "";
+    string outputPath = result.GetValue(outputFilePathOption) ?? "";
+    string format = result.GetValue(formatOption) ?? "training";
+    string promptStyle = result.GetValue(promptStyleOption) ?? "default";
+    string systemPromptOverride = result.GetValue(systemPromptOption) ?? "";
+    string userPromptOverride = result.GetValue(userPromptOption) ?? "";
+    bool llmAssistantOutput = result.GetValue(llmAssistantOutputOption);
+    string llmOverridePrompt = result.GetValue(llmOverridePromptOption) ?? "";
+    string redaction = result.GetValue(redactionOption) ?? "message";
+    string reasoningEffort = result.GetValue(reasoningEffortOption) ?? "auto";
+    string providerOptionValue = result.GetValue(providerOption) ?? "";
+    string apiKeyOptionValue = result.GetValue(apiKeyOption) ?? "";
+    string endpointOptionValue = result.GetValue(endpointUrlOption) ?? "";
+    string modelOptionValue = result.GetValue(modelIdOption) ?? "";
+
+    // Build the pipeline input with raw halves. The pipeline applies
+    // option-wins-over-environment itself before validation and dispatch.
+    RawValue provider = RawValue.From(providerOptionValue, Environment.GetEnvironmentVariable("DIFFTOJSON_PROVIDER") ?? "");
+    RawValue credential = RawValue.From(apiKeyOptionValue, Environment.GetEnvironmentVariable("DIFFTOJSON_API_KEY") ?? "");
+    RawValue endpoint = RawValue.From(endpointOptionValue, Environment.GetEnvironmentVariable("DIFFTOJSON_ENDPOINT") ?? "");
+    RawValue model = RawValue.From(modelOptionValue, Environment.GetEnvironmentVariable("DIFFTOJSON_MODEL") ?? "");
+
+    bool isRaw = string.Equals(format, "raw", StringComparison.OrdinalIgnoreCase);
+
+    RunRawInput? rawInput = isRaw
+        ? new(
+            repoDirectoryValue?.FullName ?? "",
+            repoUrl,
+            license,
+            outputPath,
+            redaction,
+            reasoningEffort,
+            llmAssistantOutput,
+            llmOverridePrompt,
+            provider,
+            credential,
+            endpoint,
+            model)
+        : null;
+
+    RunTrainingInput? trainingInput = isRaw
+        ? null
+        : new(
+            repoDirectoryValue?.FullName ?? "",
+            repoUrl,
+            license,
+            outputPath,
+            redaction,
+            reasoningEffort,
+            llmAssistantOutput,
+            llmOverridePrompt,
+            provider,
+            credential,
+            endpoint,
+            model,
+            promptStyle,
+            systemPromptOverride,
+            userPromptOverride);
+
+    // Per-run chat credentials for the injected seams. Validation and
+    // fallback authority stays in the pipeline, which re-resolves from the raw input.
+    services.AddSingleton<IChatClientFactory>(_ => new ChatClientFactory(
+        provider.EffectiveValue,
+        credential.EffectiveValue,
+        endpoint.EffectiveValue,
+        model.EffectiveValue));
+
+    using ServiceProvider serviceProvider = services.BuildServiceProvider();
+    IExtractionRunPipeline pipeline = serviceProvider.GetRequiredService<IExtractionRunPipeline>();
+
+    // Cancel the pipeline token on Ctrl+C.
+    using CancellationTokenSource linkedCts = CancellationTokenSource.CreateLinkedTokenSource(invocationToken);
+    void CancelPipeline(object? sender, ConsoleCancelEventArgs args)
+    {
+        args.Cancel = true;
+        linkedCts.Cancel();
+    }
+    Console.CancelKeyPress += CancelPipeline;
+
     try
     {
-        DirectoryInfo targetDir = result.GetValue(repoDirectoryOption) ?? new DirectoryInfo(Directory.GetCurrentDirectory());
-        string repoUrl = result.GetValue(repoUrlOption) ?? "";
-        string repoName = targetDir.Name;
+        // Render every console line from pipeline progress.
+        IProgress<RunProgress> progress = new Progress<RunProgress>(value => Console.WriteLine(value.Message));
 
-        string outputFilePath = result.GetValue(outputFilePathOption) ?? "";
+        ExtractionRunFacts facts = isRaw
+            ? await pipeline.RunRawAsync(rawInput!, progress, linkedCts.Token)
+            : await pipeline.RunTrainingAsync(trainingInput!, progress, linkedCts.Token);
 
-        string outputPath;
-        if (string.IsNullOrEmpty(outputFilePath))
-        {
-            outputPath = Path.Combine(targetDir.FullName, $"{repoName}-commits.jsonl");
-        }
-        else if (outputFilePath.EndsWith(".jsonl", StringComparison.OrdinalIgnoreCase))
-        {
-            outputPath = Path.GetFullPath(outputFilePath);
-        }
-        else
-        {
-            outputPath = Path.Combine(Path.GetFullPath(outputFilePath), $"{repoName}-commits.jsonl");
-        }
-
-        string provider = result.GetValue(providerOption) ?? "";
-        string apiKey = result.GetValue(apiKeyOption) ?? "";
-        string? endpointUrl = result.GetValue(endpointUrlOption);
-        string? modelId = result.GetValue(modelIdOption);
-
-        // Fall back to environment variables so secrets (especially the API key) are not
-        // exposed on the command line, where they are visible in process listings.
-        if (string.IsNullOrEmpty(provider))
-            provider = Environment.GetEnvironmentVariable("DIFFTOJSON_PROVIDER") ?? "";
-        if (string.IsNullOrEmpty(apiKey))
-            apiKey = Environment.GetEnvironmentVariable("DIFFTOJSON_API_KEY") ?? "";
-        if (string.IsNullOrEmpty(endpointUrl))
-            endpointUrl = Environment.GetEnvironmentVariable("DIFFTOJSON_ENDPOINT");
-        if (string.IsNullOrEmpty(modelId))
-            modelId = Environment.GetEnvironmentVariable("DIFFTOJSON_MODEL");
-
-        string licenseProvided = result.GetValue(licenseOption) ?? "";
-
-        string format = result.GetValue(formatOption) ?? "training";
-        string promptStyle = result.GetValue(promptStyleOption) ?? "default";
-        string systemPromptOverride = result.GetValue(systemPromptOption) ?? "";
-        string userPromptOverride = result.GetValue(userPromptOption) ?? "";
-        bool llmAssistantOutput = result.GetValue(llmAssistantOutputOption);
-        string llmOverridePrompt = result.GetValue(llmOverridePromptOption) ?? "";
-        string redactionStr = result.GetValue(redactionOption) ?? "message";
-        string reasoningEffortStr = result.GetValue(reasoningEffortOption) ?? "auto";
-
-        if (llmAssistantOutput && format == "raw")
-        {
-            await Console.Error.WriteLineAsync("Error: --llm-assistant-output is not compatible with --format raw.");
-            Environment.Exit(1);
-            return;
-        }
-
-        if (!string.IsNullOrEmpty(llmOverridePrompt) && !llmAssistantOutput)
-        {
-            await Console.Error.WriteLineAsync("Error: --llm-override-prompt requires --llm-assistant-output.");
-            Environment.Exit(1);
-            return;
-        }
-
-        if (redactionStr == "none" && llmAssistantOutput)
-        {
-            await Console.Out.WriteLineAsync("Warning: --redaction none combined with --llm-assistant-output may expose PII in LLM output.");
-        }
-
-        string? validationError;
-        foreach (var entry in new[] {
-            (Value: systemPromptOverride, Flag: "--system-prompt"),
-            (Value: userPromptOverride, Flag: "--user-prompt"),
-            (Value: llmOverridePrompt, Flag: "--llm-override-prompt")
-        })
-        {
-            validationError = ValidatePlaceholders(entry.Value);
-            if (validationError is not null)
-            {
-                await Console.Error.WriteLineAsync($"Error in {entry.Flag}: {validationError}");
-                Environment.Exit(1);
-                return;
-            }
-        }
-
-        Console.WriteLine($"Analyzing repository: {targetDir.Name} at {targetDir.FullName}");
-
-        RedactionTier redactionTier = redactionStr switch
-        {
-            "none" => RedactionTier.None,
-            "message" => RedactionTier.Message,
-            "diff" => RedactionTier.Diff,
-            "all" => RedactionTier.All,
-            _ => RedactionTier.Message
-        };
-
-        if (!string.IsNullOrEmpty(reasoningEffortStr) && !string.Equals(reasoningEffortStr, "auto", StringComparison.OrdinalIgnoreCase) && !llmAssistantOutput)
-        {
-            await Console.Error.WriteLineAsync("Error: --reasoning-effort requires --llm-assistant-output when set to a value other than 'auto'.");
-            Environment.Exit(1);
-            return;
-        }
-
-        IServiceProvider serviceProvider;
-
-        services.AddSingleton<IChatClientFactory>(_ =>
-            new ChatClientFactory(provider, apiKey, endpointUrl ?? "", modelId ?? ""));
-
-        services.AddSingleton(sp => new LlmAssistantWriter(
-            sp.GetRequiredService<IChatClientFactory>(),
-            sp.GetRequiredService<RedactionPolicy>()));
-
-        string license;
-
-        if (string.IsNullOrEmpty(licenseProvided))
-        {
-            ArgumentException.ThrowIfNullOrEmpty(endpointUrl);
-            ArgumentException.ThrowIfNullOrEmpty(modelId);
-
-            services.AddSingleton<ILicenseAnalyzer, AILicenseAnalyzer>();
-            serviceProvider = services.BuildServiceProvider();
-
-            ILicenseAnalyzer licenseAnalyzer = serviceProvider.GetRequiredService<ILicenseAnalyzer>();
-
-            FileInfo? fileInfo = await LicenseFileFinder.FindLicenseFile(targetDir.FullName);
-
-            if (fileInfo is not null)
-                license = await licenseAnalyzer.AnalyzeLicenseAsync(fileInfo) ?? "Unknown";
-            else
-                license = "Unknown";
-
-            await Console.Out.WriteLineAsync($"Detected License: {license}");
-        }
-        else
-        {
-            serviceProvider = services.BuildServiceProvider();
-            license = licenseProvided;
-            await Console.Out.WriteLineAsync($"Using specified License: {license}");
-        }
-
-        IReasoningEffortMatrix matrix = serviceProvider.GetRequiredService<IReasoningEffortMatrix>();
-        IChatOptionsBuilder chatOptionsBuilder = serviceProvider.GetRequiredService<IChatOptionsBuilder>();
-
-        // Only touch the capability cache when reasoning is actually needed,
-        // so --format raw and non-LLM runs never pay for network/file I/O.
-        if (llmAssistantOutput && !string.IsNullOrEmpty(reasoningEffortStr)
-            && matrix is ModelsDevReasoningEffortMatrix modelsDevMatrix)
-        {
-            CacheStatus status = await modelsDevMatrix.GetCacheStatusAsync();
-            if (status == CacheStatus.Unavailable)
-            {
-                await Console.Error.WriteLineAsync("Warning: capability data unavailable; proceeding with auto-only fallback.");
-            }
-            else if (status == CacheStatus.Stale)
-            {
-                await Console.Error.WriteLineAsync("Warning: capability data is stale; proceeding with cached capability data.");
-            }
-        }
-
-        if (llmAssistantOutput && !string.IsNullOrEmpty(reasoningEffortStr))
-        {
-            if (string.IsNullOrEmpty(modelId))
-            {
-                await Console.Error.WriteLineAsync("Error: --reasoning-effort requires --model-id when --llm-assistant-output is enabled.");
-                Environment.Exit(1);
-                return;
-            }
-
-            if (!Enum.TryParse<ReasoningEffort>(reasoningEffortStr, ignoreCase: true, out var reasoningEffort))
-            {
-                IReadOnlySet<ReasoningEffort> validSet = matrix.GetSupportedReasoningValues(modelId);
-                string validList = string.Join(", ", validSet.Select(v => v.ToString().ToLowerInvariant()));
-                await Console.Error.WriteLineAsync($"Error: --reasoning-effort '{reasoningEffortStr}' is not a valid value.");
-                await Console.Error.WriteLineAsync($"Supported values: {validList}");
-                Environment.Exit(1);
-                return;
-            }
-
-            IReadOnlySet<ReasoningEffort> supported = matrix.GetSupportedReasoningValues(modelId);
-            if (!supported.Contains(reasoningEffort))
-            {
-                string validList = string.Join(", ", supported.Select(v => v.ToString().ToLowerInvariant()));
-                await Console.Error.WriteLineAsync($"Error: --reasoning-effort '{reasoningEffortStr}' is not supported for provider '{provider}', model '{modelId}'.");
-                await Console.Error.WriteLineAsync($"Supported values: {validList}");
-                Environment.Exit(1);
-                return;
-            }
-        }
-
-        IGitCommitParser commitParser = serviceProvider.GetRequiredService<IGitCommitParser>();
-
-        if (format == "raw")
-        {
-            IDiffJsonFileWriter diffJsonFileWriter = serviceProvider.GetRequiredService<IDiffJsonFileWriter>();
-            RedactionPolicy redactionPolicy = serviceProvider.GetRequiredService<RedactionPolicy>();
-
-            static async IAsyncEnumerable<CommitRecord> ApplyRedaction(
-                IAsyncEnumerable<CommitRecord> source,
-                RedactionPolicy policy,
-                RedactionTier tier,
-                [EnumeratorCancellation] CancellationToken ct)
-            {
-                await foreach (var record in source.WithCancellation(ct))
-                {
-                    yield return policy.Redact(record, tier);
-                }
-            }
-
-            IAsyncEnumerable<CommitRecord> records = ApplyRedaction(
-                commitParser.ParseCommitsStreamAsync(repoName, license,
-                    targetDir.FullName, repoUrl, CancellationToken.None),
-                redactionPolicy, redactionTier, CancellationToken.None);
-
-            await diffJsonFileWriter.WriteToJsonFileAsync(records, outputPath, CancellationToken.None);
-        }
-        else
-        {
-            IDiffTrainingJsonFileWriter trainingWriter = serviceProvider.GetRequiredService<IDiffTrainingJsonFileWriter>();
-            TrainingExampleBuilder trainingBuilder = serviceProvider.GetRequiredService<TrainingExampleBuilder>();
-
-            PromptTemplate preset = PromptPresets.Get(promptStyle);
-            string effectiveSystemTemplate = !string.IsNullOrEmpty(systemPromptOverride)
-                ? systemPromptOverride
-                : preset.System;
-            string effectiveUserTemplate = !string.IsNullOrEmpty(userPromptOverride)
-                ? userPromptOverride
-                : preset.User;
-
-            PromptTemplate effectiveTemplate = new(effectiveSystemTemplate, effectiveUserTemplate);
-
-            ReasoningEffort parsedEffort = Enum.TryParse<ReasoningEffort>(reasoningEffortStr, ignoreCase: true, out var e) ? e : ReasoningEffort.Auto;
-            ChatOptions finalOptions = chatOptionsBuilder.BuildChatOptions(parsedEffort, provider, modelId ?? "");
-
-            TrainingExampleOptions options = new(
-                effectiveTemplate,
-                string.IsNullOrEmpty(llmOverridePrompt) ? null : llmOverridePrompt,
-                llmAssistantOutput,
-                redactionTier,
-                finalOptions);
-
-            IAsyncEnumerable<CommitRecord> rawCommits = commitParser.ParseCommitsStreamAsync(repoName, license,
-                targetDir.FullName, repoUrl, CancellationToken.None);
-
-            IAsyncEnumerable<CommitTrainingRecord> trainingRecords =
-                trainingBuilder.BuildAsync(rawCommits, options, CancellationToken.None);
-
-            await trainingWriter.WriteToJsonFileAsync(trainingRecords, outputPath, CancellationToken.None);
-        }
-
-        await Console.Out.WriteLineAsync($"Successfully wrote commits to {outputPath}");
+        await Console.Out.WriteLineAsync($"Successfully wrote {facts.RecordCount} commits to {facts.OutputPath} (License: {facts.License})");
+        return 0;
+    }
+    catch (ArgumentException ex)
+    {
+        await Console.Error.WriteLineAsync($"Error: {ex.Message}");
+        return 2;
+    }
+    catch (KeyNotFoundException ex)
+    {
+        await Console.Error.WriteLineAsync($"Error: {ex.Message}");
+        return 2;
     }
     catch (Exception ex)
     {
         await Console.Error.WriteLineAsync($"Error: {ex.Message}");
-        Environment.Exit(1);
+        return 1;
+    }
+    finally
+    {
+        Console.CancelKeyPress -= CancelPipeline;
     }
 });
 
