@@ -49,7 +49,9 @@ public static partial class PromptPresets
     {
         "diff",
         "commitMessage",
-        "repoName"
+        "repoName",
+        "license",
+        "repoUrl"
     };
 
     static PromptPresets()
