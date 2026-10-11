@@ -31,8 +31,10 @@ public interface IExtractionRunPipeline
     /// <param name="cancellationToken">Cancellation token, last.</param>
     /// <returns>Output path plus resolved license plus record count.</returns>
     /// <exception cref="ArgumentException">Thrown for invalid input, including translated prompt placeholder rejections.</exception>
+    /// <exception cref="NotSupportedException">
+    /// Thrown for invalid or model-unsupported reasoning effort values, with the supported list in the message.
+    /// </exception>
     /// <exception cref="InvalidOperationException">Thrown when the run cannot complete.</exception>
-    /// <exception cref="NotSupportedException">Thrown for model-unsupported options, with the supported list in the message.</exception>
     Task<ExtractionRunFacts> RunRawAsync(
         RunRawInput input,
         IProgress<RunProgress>? progress,
@@ -46,8 +48,10 @@ public interface IExtractionRunPipeline
     /// <param name="cancellationToken">Cancellation token, last.</param>
     /// <returns>Output path plus resolved license plus record count.</returns>
     /// <exception cref="ArgumentException">Thrown for invalid input, including translated prompt placeholder rejections.</exception>
+    /// <exception cref="NotSupportedException">
+    /// Thrown for invalid or model-unsupported reasoning effort values, with the supported list in the message.
+    /// </exception>
     /// <exception cref="InvalidOperationException">Thrown when the run cannot complete.</exception>
-    /// <exception cref="NotSupportedException">Thrown for model-unsupported options, with the supported list in the message.</exception>
     Task<ExtractionRunFacts> RunTrainingAsync(
         RunTrainingInput input,
         IProgress<RunProgress>? progress,

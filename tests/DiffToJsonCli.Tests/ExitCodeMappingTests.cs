@@ -13,13 +13,10 @@ using ReasoningEffort = DiffToJsonLib.Reasoning.ReasoningEffort;
 namespace DiffToJsonCli.Tests;
 
 /// <summary>
-/// Documents and asserts the adapter exit-code table from
-/// <c>src/DiffToJsonCli/Program.cs</c>:
-/// 0 on success, 2 on usage errors (<see cref="ArgumentException"/> including
-/// translated placeholder rejections plus <see cref="KeyNotFoundException"/>
-/// for unknown presets), 1 on run failures and unexpected errors.
-/// The mapper below mirrors the <c>SetAction</c> catch blocks verbatim so the
-/// table stays asserted without driving the whole command.
+/// Asserts the real exit-code table consumed by <c>Program.cs</c>.
+/// <see cref="ExitCode.FromException"/> is the single mapping the adapter uses and
+/// these tests assert, so the table cannot drift. Pipeline tests below verify that
+/// representative inputs throw the exception kinds the table maps.
 /// </summary>
 public sealed class ExitCodeMappingTests
 {
@@ -70,6 +67,9 @@ public sealed class ExitCodeMappingTests
         public bool ProducesReasoningOnAuto(string model) => false;
 
         public AIModelReasoningOptionType? GetReasoningType(string model, string provider) => null;
+
+        public Task<CacheStatus> GetCacheStatusAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult(CacheStatus.Fresh);
     }
 
     private sealed class FakeChatOptionsBuilder : IChatOptionsBuilder
@@ -100,30 +100,18 @@ public sealed class ExitCodeMappingTests
         }
     }
 
-    /// <summary>
-    /// Mirrors <c>Program.cs SetAction</c> catch mapping:
-    /// <see cref="ArgumentException"/> plus <see cref="KeyNotFoundException"/>
-    /// exit 2; any other <see cref="Exception"/> exits 1.
-    /// </summary>
-    private static int MapToExitCode(Exception ex) => ex switch
-    {
-        ArgumentException => 2,
-        KeyNotFoundException => 2,
-        _ => 1,
-    };
-
     private static CliExtractionRunPipeline CreatePipeline(FakeCommitParser parser)
     {
+        RedactionPolicy policy = new(new Dictionary<RedactionTier, Redactor>());
         return new CliExtractionRunPipeline(
             parser,
             new FakeLicenseAnalyzer(),
             new FakeEffortMatrix(),
             new FakeChatOptionsBuilder(),
-            new TrainingExampleBuilder(
-                new RedactionPolicy(new Dictionary<RedactionTier, Redactor>()),
-                new DisabledAssistantMessageGenerator()),
+            new TrainingExampleBuilder(policy, new DisabledAssistantMessageGenerator()),
             new FakeRawWriter(),
-            new FakeTrainingWriter());
+            new FakeTrainingWriter(),
+            policy);
     }
 
     private static string CreateTempDirectory()
@@ -133,32 +121,65 @@ public sealed class ExitCodeMappingTests
         return path;
     }
 
-    [Test]
-    public async Task ArgumentException_MapsToExitCode2()
+    private static void DeleteTempDirectory(string path)
     {
-        await Assert.That(MapToExitCode(new ArgumentException("bad usage"))).IsEqualTo(2);
+        try
+        {
+            if (Directory.Exists(path))
+            {
+                Directory.Delete(path, recursive: true);
+            }
+        }
+        catch
+        {
+            // Best effort cleanup only.
+        }
     }
 
     [Test]
-    public async Task KeyNotFoundException_MapsToExitCode2()
+    public async Task ArgumentException_MapsToUsageError()
     {
-        await Assert.That(MapToExitCode(new KeyNotFoundException("unknown preset"))).IsEqualTo(2);
+        await Assert.That(ExitCode.FromException(new ArgumentException("bad usage")))
+            .IsEqualTo(ExitCode.UsageError);
     }
 
     [Test]
-    public async Task InvalidOperationException_MapsToExitCode1()
+    public async Task KeyNotFoundException_MapsToUsageError()
     {
-        await Assert.That(MapToExitCode(new InvalidOperationException("run failure"))).IsEqualTo(1);
+        await Assert.That(ExitCode.FromException(new KeyNotFoundException("unknown preset")))
+            .IsEqualTo(ExitCode.UsageError);
     }
 
     [Test]
-    public async Task GenericException_MapsToExitCode1()
+    public async Task NotSupportedException_MapsToUsageError()
     {
-        await Assert.That(MapToExitCode(new Exception("unexpected"))).IsEqualTo(1);
+        await Assert.That(ExitCode.FromException(new NotSupportedException("unsupported effort")))
+            .IsEqualTo(ExitCode.UsageError);
     }
 
     [Test]
-    public async Task PlaceholderRejection_ThrowsArgumentException_MapsToExitCode2()
+    public async Task OperationCanceledException_MapsToCancelled()
+    {
+        await Assert.That(ExitCode.FromException(new OperationCanceledException()))
+            .IsEqualTo(ExitCode.Cancelled);
+    }
+
+    [Test]
+    public async Task InvalidOperationException_MapsToRunFailure()
+    {
+        await Assert.That(ExitCode.FromException(new InvalidOperationException("run failure")))
+            .IsEqualTo(ExitCode.RunFailure);
+    }
+
+    [Test]
+    public async Task GenericException_MapsToRunFailure()
+    {
+        await Assert.That(ExitCode.FromException(new Exception("unexpected")))
+            .IsEqualTo(ExitCode.RunFailure);
+    }
+
+    [Test]
+    public async Task PlaceholderRejection_ThrowsArgumentException_MapsToUsageError()
     {
         FakeCommitParser parser = new();
         parser.Commits.Add(new CommitRecord("diff", "message", "repo", "MIT", "url"));
@@ -195,16 +216,16 @@ public sealed class ExitCodeMappingTests
             }
 
             await Assert.That(caught).IsNotNull();
-            await Assert.That(MapToExitCode(caught!)).IsEqualTo(2);
+            await Assert.That(ExitCode.FromException(caught!)).IsEqualTo(ExitCode.UsageError);
         }
         finally
         {
-            Directory.Delete(tempDir, recursive: true);
+            DeleteTempDirectory(tempDir);
         }
     }
 
     [Test]
-    public async Task LlmOverridePlaceholderRejection_ThrowsArgumentException_MapsToExitCode2()
+    public async Task LlmOverridePlaceholderRejection_ThrowsArgumentException_MapsToUsageError()
     {
         FakeCommitParser parser = new();
         parser.Commits.Add(new CommitRecord("diff", "message", "repo", "MIT", "url"));
@@ -241,16 +262,16 @@ public sealed class ExitCodeMappingTests
             }
 
             await Assert.That(caught).IsNotNull();
-            await Assert.That(MapToExitCode(caught!)).IsEqualTo(2);
+            await Assert.That(ExitCode.FromException(caught!)).IsEqualTo(ExitCode.UsageError);
         }
         finally
         {
-            Directory.Delete(tempDir, recursive: true);
+            DeleteTempDirectory(tempDir);
         }
     }
 
     [Test]
-    public async Task UnknownPreset_ThrowsKeyNotFoundException_MapsToExitCode2()
+    public async Task UnknownPreset_ThrowsKeyNotFoundException_MapsToUsageError()
     {
         FakeCommitParser parser = new();
         parser.Commits.Add(new CommitRecord("diff", "message", "repo", "MIT", "url"));
@@ -287,16 +308,16 @@ public sealed class ExitCodeMappingTests
             }
 
             await Assert.That(caught).IsNotNull();
-            await Assert.That(MapToExitCode(caught!)).IsEqualTo(2);
+            await Assert.That(ExitCode.FromException(caught!)).IsEqualTo(ExitCode.UsageError);
         }
         finally
         {
-            Directory.Delete(tempDir, recursive: true);
+            DeleteTempDirectory(tempDir);
         }
     }
 
     [Test]
-    public async Task RunFailure_ThrowsInvalidOperationException_MapsToExitCode1()
+    public async Task RunFailure_ThrowsInvalidOperationException_MapsToRunFailure()
     {
         FakeCommitParser parser = new()
         {
@@ -335,16 +356,16 @@ public sealed class ExitCodeMappingTests
             }
 
             await Assert.That(caught).IsNotNull();
-            await Assert.That(MapToExitCode(caught!)).IsEqualTo(1);
+            await Assert.That(ExitCode.FromException(caught!)).IsEqualTo(ExitCode.RunFailure);
         }
         finally
         {
-            Directory.Delete(tempDir, recursive: true);
+            DeleteTempDirectory(tempDir);
         }
     }
 
     [Test]
-    public async Task UsageError_InvalidEffort_MapsToExitCode2()
+    public async Task UsageError_InvalidEffort_ThrowsNotSupportedException_MapsToUsageError()
     {
         FakeCommitParser parser = new();
         CliExtractionRunPipeline pipeline = CreatePipeline(parser);
@@ -366,22 +387,67 @@ public sealed class ExitCodeMappingTests
                 RawValue.From("", ""),
                 RawValue.From("", ""));
 
-            ArgumentException? caught = null;
+            NotSupportedException? caught = null;
             try
             {
                 await pipeline.RunRawAsync(input, progress: null, CancellationToken.None);
             }
-            catch (ArgumentException ex)
+            catch (NotSupportedException ex)
             {
                 caught = ex;
             }
 
             await Assert.That(caught).IsNotNull();
-            await Assert.That(MapToExitCode(caught!)).IsEqualTo(2);
+            await Assert.That(ExitCode.FromException(caught!)).IsEqualTo(ExitCode.UsageError);
         }
         finally
         {
-            Directory.Delete(tempDir, recursive: true);
+            DeleteTempDirectory(tempDir);
+        }
+    }
+
+    [Test]
+    public async Task Cancellation_MidRun_MapsToCancelled()
+    {
+        FakeCommitParser parser = new();
+        CliExtractionRunPipeline pipeline = CreatePipeline(parser);
+
+        string tempDir = CreateTempDirectory();
+        try
+        {
+            using CancellationTokenSource cts = new();
+            await cts.CancelAsync();
+
+            RunRawInput input = new(
+                tempDir,
+                "https://github.com/test/repo",
+                "MIT",
+                "",
+                "message",
+                "auto",
+                false,
+                "",
+                RawValue.From("", ""),
+                RawValue.From("", ""),
+                RawValue.From("", ""),
+                RawValue.From("", ""));
+
+            OperationCanceledException? caught = null;
+            try
+            {
+                await pipeline.RunRawAsync(input, progress: null, cts.Token);
+            }
+            catch (OperationCanceledException ex)
+            {
+                caught = ex;
+            }
+
+            await Assert.That(caught).IsNotNull();
+            await Assert.That(ExitCode.FromException(caught!)).IsEqualTo(ExitCode.Cancelled);
+        }
+        finally
+        {
+            DeleteTempDirectory(tempDir);
         }
     }
 }

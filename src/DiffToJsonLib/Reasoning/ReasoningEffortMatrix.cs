@@ -130,4 +130,9 @@ public sealed class ReasoningEffortMatrix : IReasoningEffortMatrix
     {
         return null;
     }
+
+    public Task<CacheStatus> GetCacheStatusAsync(CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult(CacheStatus.Fresh);
+    }
 }

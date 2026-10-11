@@ -19,7 +19,6 @@ using DiffToJsonLib.Prompts;
 using DiffToJsonLib.Reasoning;
 using DiffToJsonLib.Training;
 using DiffToJsonLib.Writers;
-using Microsoft.Extensions.Compliance.Redaction;
 using ReasoningEffort = DiffToJsonLib.Reasoning.ReasoningEffort;
 
 namespace DiffToJsonCli.Execution;
@@ -44,7 +43,7 @@ public sealed class CliExtractionRunPipeline : IExtractionRunPipeline
 
     /// <summary>
     /// Creates a pipeline from the existing abstractions. File discovery stays inside
-    /// this class rather than arriving as a seam. Seven constructor parameters accepted.
+    /// this class rather than arriving as a seam. Eight constructor parameters accepted.
     /// </summary>
     public CliExtractionRunPipeline(
         IGitCommitParser commitParser,
@@ -53,7 +52,8 @@ public sealed class CliExtractionRunPipeline : IExtractionRunPipeline
         IChatOptionsBuilder chatOptionsBuilder,
         TrainingExampleBuilder trainingBuilder,
         IDiffJsonFileWriter rawWriter,
-        IDiffTrainingJsonFileWriter trainingWriter)
+        IDiffTrainingJsonFileWriter trainingWriter,
+        RedactionPolicy redactionPolicy)
     {
         ArgumentNullException.ThrowIfNull(commitParser);
         ArgumentNullException.ThrowIfNull(licenseAnalyzer);
@@ -62,6 +62,7 @@ public sealed class CliExtractionRunPipeline : IExtractionRunPipeline
         ArgumentNullException.ThrowIfNull(trainingBuilder);
         ArgumentNullException.ThrowIfNull(rawWriter);
         ArgumentNullException.ThrowIfNull(trainingWriter);
+        ArgumentNullException.ThrowIfNull(redactionPolicy);
 
         _commitParser = commitParser;
         _licenseAnalyzer = licenseAnalyzer;
@@ -71,15 +72,9 @@ public sealed class CliExtractionRunPipeline : IExtractionRunPipeline
         _rawWriter = rawWriter;
         _trainingWriter = trainingWriter;
 
-        // Mirrors the redaction registrations in the command setup. RegexPiiRedactor is
-        // stateless, so this policy redacts identically to the service-provided one.
-        Redactor redactor = new RegexPiiRedactor();
-        _redactionPolicy = new RedactionPolicy(new Dictionary<RedactionTier, Redactor>
-        {
-            [RedactionTier.Message] = redactor,
-            [RedactionTier.Diff] = redactor,
-            [RedactionTier.All] = redactor,
-        });
+        // The injected policy is the single source of truth for redaction, shared with
+        // the DI-built TrainingExampleBuilder so raw, training, and LLM paths cannot drift.
+        _redactionPolicy = redactionPolicy;
     }
 
     /// <inheritdoc />
@@ -99,13 +94,13 @@ public sealed class CliExtractionRunPipeline : IExtractionRunPipeline
         if (input.LlmAssistantOutput)
         {
             throw new ArgumentException(
-                "--llm-assistant-output is not compatible with --format raw.", nameof(input));
+                "--llm-assistant-output is not compatible with --format raw.");
         }
 
         if (!string.IsNullOrEmpty(input.LlmOverridePrompt) && !input.LlmAssistantOutput)
         {
             throw new ArgumentException(
-                "--llm-override-prompt requires --llm-assistant-output.", nameof(input));
+                "--llm-override-prompt requires --llm-assistant-output.");
         }
 
         RedactionTier tier = ParseRedactionTier(input.Redaction);
@@ -114,8 +109,7 @@ public sealed class CliExtractionRunPipeline : IExtractionRunPipeline
         if (effort != ReasoningEffort.Auto && !input.LlmAssistantOutput)
         {
             throw new ArgumentException(
-                "--reasoning-effort requires --llm-assistant-output when set to a value other than 'auto'.",
-                nameof(input));
+                "--reasoning-effort requires --llm-assistant-output when set to a value other than 'auto'.");
         }
 
         SharedSetup setup = await ResolveSharedSetupAsync(
@@ -132,8 +126,6 @@ public sealed class CliExtractionRunPipeline : IExtractionRunPipeline
             llmAssistantOutput: false,
             progress,
             cancellationToken).ConfigureAwait(false);
-
-        ValidatePromptOverride(input.LlmOverridePrompt, "--llm-override-prompt");
 
         progress?.Report(new RunProgress(RunPhase.ParsingCommits, $"Parsing commits from {setup.RepoDirectory}."));
 
@@ -170,7 +162,7 @@ public sealed class CliExtractionRunPipeline : IExtractionRunPipeline
         if (!string.IsNullOrEmpty(input.LlmOverridePrompt) && !input.LlmAssistantOutput)
         {
             throw new ArgumentException(
-                "--llm-override-prompt requires --llm-assistant-output.", nameof(input));
+                "--llm-override-prompt requires --llm-assistant-output.");
         }
 
         RedactionTier tier = ParseRedactionTier(input.Redaction);
@@ -179,8 +171,47 @@ public sealed class CliExtractionRunPipeline : IExtractionRunPipeline
         if (effort != ReasoningEffort.Auto && !input.LlmAssistantOutput)
         {
             throw new ArgumentException(
-                "--reasoning-effort requires --llm-assistant-output when set to a value other than 'auto'.",
-                nameof(input));
+                "--reasoning-effort requires --llm-assistant-output when set to a value other than 'auto'.");
+        }
+
+        if (input.LlmAssistantOutput && tier == RedactionTier.None)
+        {
+            progress?.Report(new RunProgress(RunPhase.Warning,
+                "Warning: --redaction none combined with --llm-assistant-output may expose PII in LLM output."));
+        }
+
+        // Template validation runs before any license detection so a usage error never
+        // pays for a capability lookup or an LLM license-analysis call.
+        string promptStyle = string.IsNullOrEmpty(input.PromptStyle) ? "default" : input.PromptStyle;
+        PromptTemplate preset = PromptPresets.Get(promptStyle);
+
+        string effectiveSystem = !string.IsNullOrEmpty(input.SystemPromptOverride)
+            ? input.SystemPromptOverride
+            : preset.System;
+        string effectiveUser = !string.IsNullOrEmpty(input.UserPromptOverride)
+            ? input.UserPromptOverride
+            : preset.User;
+        PromptTemplate effectiveTemplate = new(effectiveSystem, effectiveUser);
+
+        ValidateTemplate(effectiveTemplate);
+        ValidatePromptOverride(input.LlmOverridePrompt, "--llm-override-prompt");
+
+        // Capability-data warnings and support checks stay behind LLM runs: auto is
+        // accepted by every model, so only a non-auto effort needs a support query.
+        if (input.LlmAssistantOutput)
+        {
+            await ReportCapabilityCacheStatusAsync(progress, cancellationToken).ConfigureAwait(false);
+
+            if (effort != ReasoningEffort.Auto)
+            {
+                IReadOnlySet<ReasoningEffort> supported = _effortMatrix.GetSupportedReasoningValues(model);
+                if (!supported.Contains(effort))
+                {
+                    string validList = string.Join(", ", supported.Select(v => v.ToString().ToLowerInvariant()));
+                    throw new NotSupportedException(
+                        $"--reasoning-effort '{input.ReasoningEffort}' is not supported for provider '{provider}', model '{model}'. Supported values: {validList}");
+                }
+            }
         }
 
         SharedSetup setup = await ResolveSharedSetupAsync(
@@ -197,33 +228,6 @@ public sealed class CliExtractionRunPipeline : IExtractionRunPipeline
             input.LlmAssistantOutput,
             progress,
             cancellationToken).ConfigureAwait(false);
-
-        // The capability cache is only touched on LLM runs: auto is accepted by every
-        // model, so only a non-auto effort needs a support query. Single query, parsed once.
-        if (input.LlmAssistantOutput && effort != ReasoningEffort.Auto)
-        {
-            IReadOnlySet<ReasoningEffort> supported = _effortMatrix.GetSupportedReasoningValues(model);
-            if (!supported.Contains(effort))
-            {
-                string validList = string.Join(", ", supported.Select(v => v.ToString().ToLowerInvariant()));
-                throw new NotSupportedException(
-                    $"--reasoning-effort '{input.ReasoningEffort}' is not supported for provider '{provider}', model '{model}'. Supported values: {validList}");
-            }
-        }
-
-        string promptStyle = string.IsNullOrEmpty(input.PromptStyle) ? "default" : input.PromptStyle;
-        PromptTemplate preset = PromptPresets.Get(promptStyle);
-
-        string effectiveSystem = !string.IsNullOrEmpty(input.SystemPromptOverride)
-            ? input.SystemPromptOverride
-            : preset.System;
-        string effectiveUser = !string.IsNullOrEmpty(input.UserPromptOverride)
-            ? input.UserPromptOverride
-            : preset.User;
-        PromptTemplate effectiveTemplate = new(effectiveSystem, effectiveUser);
-
-        ValidateTemplate(effectiveTemplate);
-        ValidatePromptOverride(input.LlmOverridePrompt, "--llm-override-prompt");
 
         // Chat options (and the matrix queries behind the builder) stay behind LLM runs
         // so non-LLM runs never pay for capability-cache I/O. The options are unused
@@ -271,6 +275,27 @@ public sealed class CliExtractionRunPipeline : IExtractionRunPipeline
     }
 
     /// <summary>
+    /// Reports capability-catalog staleness through the progress sink before an LLM run,
+    /// mirroring the previous one-line stderr warnings. Fresh data is silent.
+    /// </summary>
+    private async Task ReportCapabilityCacheStatusAsync(
+        IProgress<RunProgress>? progress, CancellationToken cancellationToken)
+    {
+        CacheStatus status = await _effortMatrix.GetCacheStatusAsync(cancellationToken).ConfigureAwait(false);
+
+        if (status == CacheStatus.Unavailable)
+        {
+            progress?.Report(new RunProgress(RunPhase.Warning,
+                "Warning: capability data unavailable; proceeding with auto-only fallback."));
+        }
+        else if (status == CacheStatus.Stale)
+        {
+            progress?.Report(new RunProgress(RunPhase.Warning,
+                "Warning: capability data is stale; proceeding with cached capability data."));
+        }
+    }
+
+    /// <summary>
     /// Shared setup built once per call: directories, output path, credential gates,
     /// and Legal Metadata with Unknown fallback. Reused by both entry points.
     /// </summary>
@@ -312,13 +337,23 @@ public sealed class CliExtractionRunPipeline : IExtractionRunPipeline
 
         if (string.IsNullOrEmpty(licenseProvided))
         {
-            ArgumentException.ThrowIfNullOrEmpty(endpoint);
-            ArgumentException.ThrowIfNullOrEmpty(model);
+            if (string.IsNullOrEmpty(endpoint))
+            {
+                throw new ArgumentException(
+                    "--endpoint-url (or DIFFTOJSON_ENDPOINT) is required when --license is not provided.");
+            }
+
+            if (string.IsNullOrEmpty(model))
+            {
+                throw new ArgumentException(
+                    "--model-id (or DIFFTOJSON_MODEL) is required when --license is not provided.");
+            }
         }
 
-        if (llmAssistantOutput)
+        if (llmAssistantOutput && string.IsNullOrEmpty(model))
         {
-            ArgumentException.ThrowIfNullOrEmpty(model);
+            throw new ArgumentException(
+                "--model-id (or DIFFTOJSON_MODEL) is required when --llm-assistant-output is enabled.");
         }
 
         cancellationToken.ThrowIfCancellationRequested();
@@ -348,7 +383,7 @@ public sealed class CliExtractionRunPipeline : IExtractionRunPipeline
         }
 
         return new SharedSetup(
-            workingDir, repoName, repoUrl ?? string.Empty, license, outputPath,
+            workingDir, repoName, repoUrl, license, outputPath,
             tier, effort, provider, credential, endpoint, model);
     }
 
@@ -379,8 +414,7 @@ public sealed class CliExtractionRunPipeline : IExtractionRunPipeline
         }
 
         throw new ArgumentException(
-            $"--redaction '{value}' is not a valid value. Supported values: none, message, diff, all.",
-            nameof(value));
+            $"--redaction '{value}' is not a valid value. Supported values: none, message, diff, all.");
     }
 
     private static ReasoningEffort ParseReasoningEffort(string value)
@@ -396,9 +430,8 @@ public sealed class CliExtractionRunPipeline : IExtractionRunPipeline
             return effort;
         }
 
-        throw new ArgumentException(
-            $"--reasoning-effort '{value}' is not a valid value. Supported values: auto, on, off, low, medium, high, xhigh, max.",
-            nameof(value));
+        throw new NotSupportedException(
+            $"--reasoning-effort '{value}' is not a valid value. Supported values: auto, on, off, low, medium, high, xhigh, max.");
     }
 
     private static void ValidateTemplate(PromptTemplate template)
@@ -409,7 +442,7 @@ public sealed class CliExtractionRunPipeline : IExtractionRunPipeline
         }
         catch (PromptTemplateValidationException ex)
         {
-            throw new ArgumentException(ex.Message, nameof(template), ex);
+            throw new ArgumentException(ex.Message, ex);
         }
     }
 
@@ -426,7 +459,7 @@ public sealed class CliExtractionRunPipeline : IExtractionRunPipeline
         }
         catch (PromptTemplateValidationException ex)
         {
-            throw new ArgumentException($"Error in {flagName}: {ex.Message}", flagName, ex);
+            throw new ArgumentException($"Error in {flagName}: {ex.Message}", ex);
         }
     }
 

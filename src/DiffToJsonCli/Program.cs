@@ -167,7 +167,7 @@ Option<string> redactionOption = new("--redaction")
 };
 redactionOption.AcceptOnlyFromAmong("message", "diff", "all", "none");
 
-RootCommand rootCommand = new("Detects and Serializes Git Diffs and Commits to a .JSONL file. Exit codes: 0 on success, 1 on run failures and unexpected errors, 2 on usage errors.")
+RootCommand rootCommand = new("Detects and Serializes Git Diffs and Commits to a .JSONL file. Exit codes: 0 on success, 1 on run failures and unexpected errors, 2 on usage errors, 130 on cancellation.")
 {
     repoDirectoryOption,
     repoUrlOption,
@@ -262,50 +262,46 @@ rootCommand.SetAction(async (result, invocationToken) =>
     using ServiceProvider serviceProvider = services.BuildServiceProvider();
     IExtractionRunPipeline pipeline = serviceProvider.GetRequiredService<IExtractionRunPipeline>();
 
-    // Cancel the pipeline token on Ctrl+C.
-    using CancellationTokenSource linkedCts = CancellationTokenSource.CreateLinkedTokenSource(invocationToken);
-    void CancelPipeline(object? sender, ConsoleCancelEventArgs args)
-    {
-        args.Cancel = true;
-        linkedCts.Cancel();
-    }
-    Console.CancelKeyPress += CancelPipeline;
-
+    // Ctrl+C handling is owned by System.CommandLine: invocationToken is already
+    // cancelled on process termination, which the pipeline honors end to end.
     try
     {
-        // Render every console line from pipeline progress.
-        IProgress<RunProgress> progress = new Progress<RunProgress>(value => Console.WriteLine(value.Message));
+        // Render every console line from pipeline progress, synchronously, so the
+        // reported order matches the pipeline's report order. Warnings go to stderr.
+        IProgress<RunProgress> progress = new ConsoleProgress();
 
         ExtractionRunFacts facts = isRaw
-            ? await pipeline.RunRawAsync(rawInput!, progress, linkedCts.Token)
-            : await pipeline.RunTrainingAsync(trainingInput!, progress, linkedCts.Token);
+            ? await pipeline.RunRawAsync(rawInput!, progress, invocationToken)
+            : await pipeline.RunTrainingAsync(trainingInput!, progress, invocationToken);
 
         await Console.Out.WriteLineAsync($"Successfully wrote {facts.RecordCount} commits to {facts.OutputPath} (License: {facts.License})");
-        return 0;
-    }
-    catch (ArgumentException ex)
-    {
-        await Console.Error.WriteLineAsync($"Error: {ex.Message}");
-        return 2;
-    }
-    catch (KeyNotFoundException ex)
-    {
-        await Console.Error.WriteLineAsync($"Error: {ex.Message}");
-        return 2;
+        return ExitCode.Success;
     }
     catch (Exception ex)
     {
-        await Console.Error.WriteLineAsync($"Error: {ex.Message}");
-        return 1;
-    }
-    finally
-    {
-        Console.CancelKeyPress -= CancelPipeline;
+        int exitCode = ExitCode.FromException(ex);
+        string message = ex is OperationCanceledException ? "Cancelled." : $"Error: {ex.Message}";
+        await Console.Error.WriteLineAsync(message);
+        return exitCode;
     }
 });
 
 ParseResult parseResult = rootCommand.Parse(args);
 
 return await parseResult.InvokeAsync();
+
+/// <summary>
+/// Synchronous progress sink: writes each <see cref="RunProgress"/> message to the
+/// console as it is reported. Warnings are routed to standard error; all other
+/// phases go to standard output.
+/// </summary>
+sealed class ConsoleProgress : IProgress<RunProgress>
+{
+    public void Report(RunProgress value)
+    {
+        TextWriter writer = value.Phase == RunPhase.Warning ? Console.Error : Console.Out;
+        writer.WriteLine(value.Message);
+    }
+}
 
 

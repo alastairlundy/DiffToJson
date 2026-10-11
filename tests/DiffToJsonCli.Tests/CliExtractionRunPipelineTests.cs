@@ -89,6 +89,8 @@ public sealed class CliExtractionRunPipelineTests
         public IReadOnlySet<ReasoningEffort> Supported { get; set; } =
             new HashSet<ReasoningEffort> { ReasoningEffort.Auto };
         public int CallCount { get; private set; }
+        public CacheStatus Status { get; set; } = CacheStatus.Fresh;
+        public int CacheStatusCallCount { get; private set; }
         public string? CapturedModel { get; private set; }
 
         public IReadOnlySet<ReasoningEffort> GetSupportedReasoningValues(string model)
@@ -101,6 +103,12 @@ public sealed class CliExtractionRunPipelineTests
         public bool ProducesReasoningOnAuto(string model) => false;
 
         public AIModelReasoningOptionType? GetReasoningType(string model, string provider) => null;
+
+        public Task<CacheStatus> GetCacheStatusAsync(CancellationToken cancellationToken = default)
+        {
+            CacheStatusCallCount++;
+            return Task.FromResult(Status);
+        }
     }
 
     private sealed class FakeChatOptionsBuilder : IChatOptionsBuilder
@@ -216,23 +224,18 @@ public sealed class CliExtractionRunPipelineTests
             new FakeTrainingWriter());
     }
 
-    private static TrainingExampleBuilder CreateTrainingBuilder()
-    {
-        return new TrainingExampleBuilder(
-            new RedactionPolicy(new Dictionary<RedactionTier, Redactor>()),
-            new DisabledAssistantMessageGenerator());
-    }
-
     private static CliExtractionRunPipeline CreatePipeline(TestSeams seams)
     {
+        RedactionPolicy policy = new(new Dictionary<RedactionTier, Redactor>());
         return new CliExtractionRunPipeline(
             seams.Parser,
             seams.License,
             seams.Matrix,
             seams.ChatOptions,
-            CreateTrainingBuilder(),
+            new TrainingExampleBuilder(policy, new DisabledAssistantMessageGenerator()),
             seams.RawWriter,
-            seams.TrainingWriter);
+            seams.TrainingWriter,
+            policy);
     }
 
     private static string CreateTempDirectory()
@@ -802,7 +805,7 @@ public sealed class CliExtractionRunPipelineTests
     #region Effort validation errors
 
     [Test]
-    public async Task InvalidEffortString_ThrowsArgumentException_WithSupportedList()
+    public async Task InvalidEffortString_ThrowsNotSupportedException_WithSupportedList()
     {
         TestSeams seams = CreateSeams();
         CliExtractionRunPipeline pipeline = CreatePipeline(seams);
@@ -813,12 +816,12 @@ public sealed class CliExtractionRunPipelineTests
             RunTrainingInput input = ValidTrainingInput(
                 tempDir, reasoningEffort: "ultra");
 
-            ArgumentException? caught = null;
+            NotSupportedException? caught = null;
             try
             {
                 await pipeline.RunTrainingAsync(input, progress: null, CancellationToken.None);
             }
-            catch (ArgumentException ex)
+            catch (NotSupportedException ex)
             {
                 caught = ex;
             }
@@ -834,7 +837,7 @@ public sealed class CliExtractionRunPipelineTests
     }
 
     [Test]
-    public async Task Raw_InvalidEffortString_ThrowsArgumentException()
+    public async Task Raw_InvalidEffortString_ThrowsNotSupportedException()
     {
         TestSeams seams = CreateSeams();
         CliExtractionRunPipeline pipeline = CreatePipeline(seams);
@@ -844,12 +847,12 @@ public sealed class CliExtractionRunPipelineTests
         {
             RunRawInput input = ValidRawInput(tempDir, reasoningEffort: "ultra");
 
-            ArgumentException? caught = null;
+            NotSupportedException? caught = null;
             try
             {
                 await pipeline.RunRawAsync(input, progress: null, CancellationToken.None);
             }
-            catch (ArgumentException ex)
+            catch (NotSupportedException ex)
             {
                 caught = ex;
             }
@@ -969,6 +972,7 @@ public sealed class CliExtractionRunPipelineTests
 
             // Capability cache stays lazy on raw runs.
             await Assert.That(seams.Matrix.CallCount).IsEqualTo(0);
+            await Assert.That(seams.Matrix.CacheStatusCallCount).IsEqualTo(0);
             await Assert.That(seams.ChatOptions.CallCount).IsEqualTo(0);
         }
         finally
@@ -1006,6 +1010,7 @@ public sealed class CliExtractionRunPipelineTests
 
             // Non-LLM training never pays for capability-cache I/O.
             await Assert.That(seams.Matrix.CallCount).IsEqualTo(0);
+            await Assert.That(seams.Matrix.CacheStatusCallCount).IsEqualTo(0);
             await Assert.That(seams.ChatOptions.CallCount).IsEqualTo(0);
         }
         finally
@@ -1131,6 +1136,240 @@ public sealed class CliExtractionRunPipelineTests
             }
 
             await Assert.That(caught).IsNotNull();
+        }
+        finally
+        {
+            DeleteTempDirectory(tempDir);
+        }
+    }
+
+    #endregion
+
+    #region Warnings, validation ordering, and message hygiene
+
+    [Test]
+    public async Task Training_RedactionNoneWithLlm_ReportsPiIWarning()
+    {
+        TestSeams seams = CreateSeams();
+        seams.Parser.Commits.Add(SampleCommit());
+        CliExtractionRunPipeline pipeline = CreatePipeline(seams);
+
+        string tempDir = CreateTempDirectory();
+        try
+        {
+            // Model is empty, so the run fails at the credential gate after the warning
+            // is reported; the warning itself is what is under test.
+            RunTrainingInput input = ValidTrainingInput(
+                tempDir, redaction: "none", llmAssistantOutput: true);
+
+            List<RunProgress> seen = new();
+            ArgumentException? caught = null;
+            try
+            {
+                await pipeline.RunTrainingAsync(
+                    input, new LambdaProgress(p => seen.Add(p)), CancellationToken.None);
+            }
+            catch (ArgumentException ex)
+            {
+                caught = ex;
+            }
+
+            await Assert.That(caught).IsNotNull();
+            await Assert.That(seen.Exists(p =>
+                p.Phase == RunPhase.Warning &&
+                p.Message.Contains("--redaction none") &&
+                p.Message.Contains("PII"))).IsTrue();
+        }
+        finally
+        {
+            DeleteTempDirectory(tempDir);
+        }
+    }
+
+    [Test]
+    public async Task Training_Llm_UnavailableCapabilityData_ReportsWarning()
+    {
+        TestSeams seams = CreateSeams();
+        seams.Parser.Commits.Add(SampleCommit());
+        seams.Matrix.Status = CacheStatus.Unavailable;
+        CliExtractionRunPipeline pipeline = CreatePipeline(seams);
+
+        string tempDir = CreateTempDirectory();
+        try
+        {
+            RunTrainingInput input = ValidTrainingInput(
+                tempDir,
+                license: "MIT",
+                llmAssistantOutput: true,
+                provider: RawValue.From("test-provider", ""),
+                model: RawValue.From("test-model", ""));
+
+            // The run later fails while building the chat client (no endpoint in tests);
+            // the capability warning is reported before dispatch and is what is under test.
+            List<RunProgress> seen = new();
+            ArgumentException? caught = null;
+            try
+            {
+                await pipeline.RunTrainingAsync(
+                    input, new LambdaProgress(p => seen.Add(p)), CancellationToken.None);
+            }
+            catch (ArgumentException ex)
+            {
+                caught = ex;
+            }
+
+            await Assert.That(caught).IsNotNull();
+            await Assert.That(seams.Matrix.CacheStatusCallCount).IsEqualTo(1);
+            await Assert.That(seen.Exists(p =>
+                p.Phase == RunPhase.Warning &&
+                p.Message.Contains("capability data unavailable"))).IsTrue();
+        }
+        finally
+        {
+            DeleteTempDirectory(tempDir);
+        }
+    }
+
+    [Test]
+    public async Task Training_Llm_StaleCapabilityData_ReportsWarning()
+    {
+        TestSeams seams = CreateSeams();
+        seams.Parser.Commits.Add(SampleCommit());
+        seams.Matrix.Status = CacheStatus.Stale;
+        CliExtractionRunPipeline pipeline = CreatePipeline(seams);
+
+        string tempDir = CreateTempDirectory();
+        try
+        {
+            RunTrainingInput input = ValidTrainingInput(
+                tempDir,
+                license: "MIT",
+                llmAssistantOutput: true,
+                provider: RawValue.From("test-provider", ""),
+                model: RawValue.From("test-model", ""));
+
+            List<RunProgress> seen = new();
+            ArgumentException? caught = null;
+            try
+            {
+                await pipeline.RunTrainingAsync(
+                    input, new LambdaProgress(p => seen.Add(p)), CancellationToken.None);
+            }
+            catch (ArgumentException ex)
+            {
+                caught = ex;
+            }
+
+            await Assert.That(caught).IsNotNull();
+            await Assert.That(seen.Exists(p =>
+                p.Phase == RunPhase.Warning &&
+                p.Message.Contains("capability data is stale"))).IsTrue();
+        }
+        finally
+        {
+            DeleteTempDirectory(tempDir);
+        }
+    }
+
+    [Test]
+    public async Task Training_InvalidTemplate_DoesNotResolveLicense()
+    {
+        TestSeams seams = CreateSeams();
+        seams.Parser.Commits.Add(SampleCommit());
+        CliExtractionRunPipeline pipeline = CreatePipeline(seams);
+
+        string tempDir = CreateTempDirectory();
+        try
+        {
+            await File.WriteAllTextAsync(Path.Combine(tempDir, "LICENSE.txt"), "license text");
+
+            // License auto-detection is available (file present, endpoint/model set), so
+            // before validation was reordered this input paid for an analyzer call
+            // before failing on the bad placeholder.
+            RunTrainingInput input = ValidTrainingInput(
+                tempDir,
+                license: "",
+                endpoint: RawValue.From("https://example.com", ""),
+                model: RawValue.From("test-model", ""),
+                systemOverride: "{bogus}");
+
+            ArgumentException? caught = null;
+            try
+            {
+                await pipeline.RunTrainingAsync(input, progress: null, CancellationToken.None);
+            }
+            catch (ArgumentException ex)
+            {
+                caught = ex;
+            }
+
+            await Assert.That(caught).IsNotNull();
+            await Assert.That(seams.License.CallCount).IsEqualTo(0);
+            await Assert.That(seams.Parser.CapturedWorkingDir).IsNull();
+        }
+        finally
+        {
+            DeleteTempDirectory(tempDir);
+        }
+    }
+
+    [Test]
+    public async Task ValidationErrors_DoNotLeakInternalParameterNames()
+    {
+        TestSeams seams = CreateSeams();
+        CliExtractionRunPipeline pipeline = CreatePipeline(seams);
+
+        string tempDir = CreateTempDirectory();
+        try
+        {
+            List<Exception> errors = new();
+
+            try
+            {
+                await pipeline.RunTrainingAsync(
+                    ValidTrainingInput(tempDir, redaction: "bogus"), progress: null, CancellationToken.None);
+            }
+            catch (Exception ex)
+            {
+                errors.Add(ex);
+            }
+
+            try
+            {
+                await pipeline.RunTrainingAsync(
+                    ValidTrainingInput(tempDir, systemOverride: "{bogus}"), progress: null, CancellationToken.None);
+            }
+            catch (Exception ex)
+            {
+                errors.Add(ex);
+            }
+
+            try
+            {
+                await pipeline.RunRawAsync(
+                    ValidRawInput(tempDir, llmAssistantOutput: true), progress: null, CancellationToken.None);
+            }
+            catch (Exception ex)
+            {
+                errors.Add(ex);
+            }
+
+            try
+            {
+                await pipeline.RunTrainingAsync(
+                    ValidTrainingInput(tempDir, llmOverridePrompt: "{diff}"), progress: null, CancellationToken.None);
+            }
+            catch (Exception ex)
+            {
+                errors.Add(ex);
+            }
+
+            await Assert.That(errors.Count).IsEqualTo(4);
+            foreach (Exception error in errors)
+            {
+                await Assert.That(error is ArgumentException).IsTrue();
+                await Assert.That(error.Message.Contains("Parameter '")).IsFalse();
+            }
         }
         finally
         {
