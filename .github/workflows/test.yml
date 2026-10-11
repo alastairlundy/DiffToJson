@@ -31,6 +31,5 @@ jobs:
         dotnet-version: 10.0.x
     - name: Build
       run: dotnet build src/DiffToJsonApp.slnx
-  #  - name: Test
-  #    run: dotnet test
-  #    working-directory: tests/CliInvoke.Tests/
+    - name: Test
+      run: dotnet test src/DiffToJsonApp.slnx

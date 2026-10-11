@@ -2,4 +2,5 @@
   <Project Path="DiffToJsonCli/DiffToJsonCli.csproj" />
   <Project Path="DiffToJsonLib/DiffToJsonLib.csproj" />
   <Project Path="../tests/DiffToJsonLib.Tests/DiffToJsonLib.Tests.csproj" />
+  <Project Path="../tests/DiffToJsonCli.Tests/DiffToJsonCli.Tests.csproj" />
 </Solution>

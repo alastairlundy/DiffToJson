@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>14</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <Version>0.6.0</Version>
+    <Title>DiffToJsonCli.Tests</Title>
+    <Authors>Alastair Lundy</Authors>
+    <Copyright>Copyright (c) 2026 Alastair Lundy</Copyright>
+    <RepositoryUrl>https://github.com/alastairlundy/DiffToJson/</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+    <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="TUnit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/DiffToJsonCli/DiffToJsonCli.csproj" />
+  </ItemGroup>
+
+</Project>
