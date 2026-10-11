@@ -59,3 +59,8 @@ The external, community-maintained source of model capability data, treated as a
 
 ### Auto Reasoning Behavior
 Whether a model produces reasoning tokens when reasoning effort is left at auto.
+
+## Execution Terms
+
+### Extraction Run
+One invocation that validates options, resolves Provenance and Legal Metadata, and writes one JSONL file from a repository directory.
