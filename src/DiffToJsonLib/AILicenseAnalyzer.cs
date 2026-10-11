@@ -20,11 +20,12 @@ namespace DiffToJsonLib;
 
 public class AILicenseAnalyzer : ILicenseAnalyzer
 {
-    private readonly IChatClient _client;
+    private readonly Lazy<IChatClient> _clientLazy;
 
     public AILicenseAnalyzer(IChatClientFactory chatClientFactory)
     {
-        _client = chatClientFactory.Create();
+        ArgumentNullException.ThrowIfNull(chatClientFactory);
+        _clientLazy = new Lazy<IChatClient>(chatClientFactory.Create);
     }
 
     /// <summary>
@@ -53,8 +54,10 @@ public class AILicenseAnalyzer : ILicenseAnalyzer
             """);
 
         ChatMessage userPrompt = new(ChatRole.User, licenseContent);
+
+        IChatClient client = _clientLazy.Value;
         
-        ChatResponse response = await _client.GetResponseAsync([systemPrompt, userPrompt], new ChatOptions
+        ChatResponse response = await client.GetResponseAsync([systemPrompt, userPrompt], new ChatOptions
         {
             Temperature = 0.6f
         });

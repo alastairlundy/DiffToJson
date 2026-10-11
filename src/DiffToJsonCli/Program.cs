@@ -18,6 +18,7 @@ using System.CommandLine;
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using CliInvoke.Extensions;
+using DiffToJsonCli.Execution;
 using DiffToJsonLib.Prompts;
 using DiffToJsonLib.Training;
 using DiffToJsonLib.Training.Abstractions;
@@ -84,6 +85,8 @@ services.AddSingleton<IReasoningEffortMatrix>(sp =>
     return new ModelsDevReasoningEffortMatrix(cache);
 });
 services.AddSingleton<IChatOptionsBuilder, ChatOptionsBuilder>();
+services.AddSingleton<ILicenseAnalyzer, AILicenseAnalyzer>();
+services.AddSingleton<IExtractionRunPipeline, CliExtractionRunPipeline>();
 
 Option<DirectoryInfo> repoDirectoryOption = new("--repo-directory")
 {
