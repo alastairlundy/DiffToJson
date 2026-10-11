@@ -32,6 +32,8 @@ public class GitLogParser
 
         while ((line = await reader.ReadLineAsync(ct)) != null)
         {
+            line = line.Replace("\r\n", "\n").Replace("\r", "\n");
+
             if (line.StartsWith("commit "))
             {
                 if (messageBuilder.Length > 0 && !string.IsNullOrWhiteSpace(diffBuilder.ToString()))
@@ -53,7 +55,7 @@ public class GitLogParser
             else if (!isCollectingDiff && !string.IsNullOrWhiteSpace(line) && !isCollectingMessage)
             {
                 isCollectingMessage = true;
-                messageBuilder.AppendLine(line);
+                messageBuilder.Append(line).Append('\n');
             }
             else if (!isCollectingDiff && (isCollectingMessage || string.IsNullOrWhiteSpace(line)))
             {
@@ -63,7 +65,7 @@ public class GitLogParser
                 }
                 else
                 {
-                    messageBuilder.AppendLine(line);
+                    messageBuilder.Append(line).Append('\n');
                 }
             }
             else if (line.StartsWith("diff --git"))
@@ -72,7 +74,7 @@ public class GitLogParser
             }
             else if (isCollectingDiff)
             {
-                diffBuilder.AppendLine(line);
+                diffBuilder.Append(line).Append('\n');
             }
         }
 

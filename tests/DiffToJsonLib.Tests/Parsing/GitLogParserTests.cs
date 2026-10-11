@@ -29,7 +29,7 @@ public class GitLogParserTests
 
         List<RawCommit> commits = await parser.ParseAsync(reader, default).ToListAsync();
 
-        await Assert.That(commits[0].Message).IsEqualTo("Add user authentication module\r\n\r\n    Implement login and registration endpoints with JWT token generation.");
+        await Assert.That(commits[0].Message).IsEqualTo("Add user authentication module\n\n    Implement login and registration endpoints with JWT token generation.");
     }
 
     [Test]

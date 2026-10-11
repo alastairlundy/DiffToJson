@@ -74,7 +74,8 @@ public class EndToEndRegressionTests
         ));
 
     private static string NormalizeLineEndings(string value) =>
-        value.Replace("\r\n", "\n").Replace("\r", "\n");
+        value.Replace("\r\n", "\n").Replace("\r", "\n")
+            .Replace("\\r\\n", "\\n").Replace("\\r", "\\n");
 
     private static async Task AssertMatchesGoldenFileAsync(string actualJsonl, string testName)
     {
