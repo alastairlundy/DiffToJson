@@ -8,7 +8,7 @@ public class AssistantMessageResultTests
     [Test]
     public async Task AssistantMessageGenerated_ConstructsWithProperties()
     {
-        var result = new AssistantMessageResult.AssistantMessageGenerated("the content", "the original");
+        AssistantMessageResult.AssistantMessageGenerated result = new AssistantMessageResult.AssistantMessageGenerated("the content", "the original");
 
         await Assert.That(result.Content).IsEqualTo("the content");
         await Assert.That(result.OriginalAssistantMessage).IsEqualTo("the original");
@@ -17,7 +17,7 @@ public class AssistantMessageResultTests
     [Test]
     public async Task AssistantMessageDisabled_ConstructsWithFallbackContent()
     {
-        var result = new AssistantMessageResult.AssistantMessageDisabled("fallback");
+        AssistantMessageResult.AssistantMessageDisabled result = new AssistantMessageResult.AssistantMessageDisabled("fallback");
 
         await Assert.That(result.FallbackContent).IsEqualTo("fallback");
     }
@@ -25,7 +25,7 @@ public class AssistantMessageResultTests
     [Test]
     public async Task AssistantMessageAttemptedAndFailed_ConstructsWithProperties()
     {
-        var result = new AssistantMessageResult.AssistantMessageAttemptedAndFailed("fallback", "original");
+        AssistantMessageResult.AssistantMessageAttemptedAndFailed result = new AssistantMessageResult.AssistantMessageAttemptedAndFailed("fallback", "original");
 
         await Assert.That(result.FallbackContent).IsEqualTo("fallback");
         await Assert.That(result.OriginalAssistantMessage).IsEqualTo("original");
@@ -34,7 +34,7 @@ public class AssistantMessageResultTests
     [Test]
     public async Task AssistantMessageAttemptedAndFailed_AllowsNullFallback()
     {
-        var result = new AssistantMessageResult.AssistantMessageAttemptedAndFailed(null, "original");
+        AssistantMessageResult.AssistantMessageAttemptedAndFailed result = new AssistantMessageResult.AssistantMessageAttemptedAndFailed(null, "original");
 
         await Assert.That(result.FallbackContent).IsNull();
         await Assert.That(result.OriginalAssistantMessage).IsEqualTo("original");
@@ -99,8 +99,8 @@ public class AssistantMessageResultTests
     [Test]
     public async Task AssistantMessageGenerated_RecordsEquality()
     {
-        var a = new AssistantMessageResult.AssistantMessageGenerated("content", "original");
-        var b = new AssistantMessageResult.AssistantMessageGenerated("content", "original");
+        AssistantMessageResult.AssistantMessageGenerated a = new AssistantMessageResult.AssistantMessageGenerated("content", "original");
+        AssistantMessageResult.AssistantMessageGenerated b = new AssistantMessageResult.AssistantMessageGenerated("content", "original");
 
         await Assert.That(a).IsEqualTo(b);
     }
@@ -108,8 +108,8 @@ public class AssistantMessageResultTests
     [Test]
     public async Task AssistantMessageGenerated_InequalityOnDifferentContent()
     {
-        var a = new AssistantMessageResult.AssistantMessageGenerated("content a", "original");
-        var b = new AssistantMessageResult.AssistantMessageGenerated("content b", "original");
+        AssistantMessageResult.AssistantMessageGenerated a = new AssistantMessageResult.AssistantMessageGenerated("content a", "original");
+        AssistantMessageResult.AssistantMessageGenerated b = new AssistantMessageResult.AssistantMessageGenerated("content b", "original");
 
         await Assert.That(a).IsNotEqualTo(b);
     }

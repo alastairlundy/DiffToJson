@@ -3,7 +3,6 @@ using DiffToJsonLib.Models;
 using DiffToJsonLib.Redactors;
 using DiffToJsonLib.Tests.Fixtures;
 using DiffToJsonLib.Training;
-using DiffToJsonLib.Training.Abstractions;
 using DiffToJsonLib.Writers;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Compliance.Redaction;
@@ -124,18 +123,18 @@ public class LlmAssistantWriterTests
     [Test]
     public async Task GenerateAsync_Success_ReturnsAssistantMessageGenerated()
     {
-        var client = new StubChatClient("hello world");
-        var factory = new StubChatClientFactory(client);
-        var policy = new RedactionPolicy(new Dictionary<RedactionTier, Redactor>());
-        var writer = new LlmAssistantWriter(factory, policy);
+        StubChatClient client = new StubChatClient("hello world");
+        StubChatClientFactory factory = new StubChatClientFactory(client);
+        RedactionPolicy policy = new RedactionPolicy(new Dictionary<RedactionTier, Redactor>());
+        LlmAssistantWriter writer = new LlmAssistantWriter(factory, policy);
 
         AssistantMessageResult result = await writer.GenerateAsync(
             "system", "user", SampleCommit, new ChatOptions(), CancellationToken.None);
 
-        using var _ = Assert.Multiple();
+        using IDisposable _ = Assert.Multiple();
         await Assert.That(result)
             .IsTypeOf<AssistantMessageResult.AssistantMessageGenerated>();
-        var generated = (AssistantMessageResult.AssistantMessageGenerated)result;
+        AssistantMessageResult.AssistantMessageGenerated generated = (AssistantMessageResult.AssistantMessageGenerated)result;
         await Assert.That(generated.Content).IsEqualTo("hello world");
         await Assert.That(generated.OriginalAssistantMessage).IsEqualTo("original message");
     }
@@ -143,18 +142,18 @@ public class LlmAssistantWriterTests
     [Test]
     public async Task GenerateAsync_ExceptionInChatCall_ReturnsAttemptedAndFailed()
     {
-        var client = new ThrowingChatClient();
-        var factory = new StubChatClientFactory(client);
-        var policy = new RedactionPolicy(new Dictionary<RedactionTier, Redactor>());
-        var writer = new LlmAssistantWriter(factory, policy);
+        ThrowingChatClient client = new ThrowingChatClient();
+        StubChatClientFactory factory = new StubChatClientFactory(client);
+        RedactionPolicy policy = new RedactionPolicy(new Dictionary<RedactionTier, Redactor>());
+        LlmAssistantWriter writer = new LlmAssistantWriter(factory, policy);
 
         AssistantMessageResult result = await writer.GenerateAsync(
             "system", "user", SampleCommit, new ChatOptions(), CancellationToken.None);
 
-        using var _ = Assert.Multiple();
+        using IDisposable _ = Assert.Multiple();
         await Assert.That(result)
             .IsTypeOf<AssistantMessageResult.AssistantMessageAttemptedAndFailed>();
-        var failed = (AssistantMessageResult.AssistantMessageAttemptedAndFailed)result;
+        AssistantMessageResult.AssistantMessageAttemptedAndFailed failed = (AssistantMessageResult.AssistantMessageAttemptedAndFailed)result;
         await Assert.That(failed.FallbackContent).IsNull();
         await Assert.That(failed.OriginalAssistantMessage).IsEqualTo("original message");
     }
@@ -162,18 +161,18 @@ public class LlmAssistantWriterTests
     [Test]
     public async Task GenerateAsync_NoAssistantMessageInResponse_ReturnsAttemptedAndFailed()
     {
-        var client = new EmptyResponseChatClient();
-        var factory = new StubChatClientFactory(client);
-        var policy = new RedactionPolicy(new Dictionary<RedactionTier, Redactor>());
-        var writer = new LlmAssistantWriter(factory, policy);
+        EmptyResponseChatClient client = new EmptyResponseChatClient();
+        StubChatClientFactory factory = new StubChatClientFactory(client);
+        RedactionPolicy policy = new RedactionPolicy(new Dictionary<RedactionTier, Redactor>());
+        LlmAssistantWriter writer = new LlmAssistantWriter(factory, policy);
 
         AssistantMessageResult result = await writer.GenerateAsync(
             "system", "user", SampleCommit, new ChatOptions(), CancellationToken.None);
 
-        using var _ = Assert.Multiple();
+        using IDisposable _ = Assert.Multiple();
         await Assert.That(result)
             .IsTypeOf<AssistantMessageResult.AssistantMessageAttemptedAndFailed>();
-        var failed = (AssistantMessageResult.AssistantMessageAttemptedAndFailed)result;
+        AssistantMessageResult.AssistantMessageAttemptedAndFailed failed = (AssistantMessageResult.AssistantMessageAttemptedAndFailed)result;
         await Assert.That(failed.FallbackContent).IsNull();
         await Assert.That(failed.OriginalAssistantMessage).IsEqualTo("original message");
     }
@@ -181,46 +180,46 @@ public class LlmAssistantWriterTests
     [Test]
     public async Task GenerateAsync_RedactionAllTier_RedactsLlmOutput()
     {
-        var client = new StubChatClient("sensitive data");
-        var factory = new StubChatClientFactory(client);
-        var redactor = new TestRedactor("[REDACTED]");
-        var policy = new RedactionPolicy(
+        StubChatClient client = new StubChatClient("sensitive data");
+        StubChatClientFactory factory = new StubChatClientFactory(client);
+        TestRedactor redactor = new TestRedactor("[REDACTED]");
+        RedactionPolicy policy = new RedactionPolicy(
             new Dictionary<RedactionTier, Redactor> { [RedactionTier.All] = redactor });
-        var writer = new LlmAssistantWriter(factory, policy);
+        LlmAssistantWriter writer = new LlmAssistantWriter(factory, policy);
 
         AssistantMessageResult result = await writer.GenerateAsync(
             "system", "user", SampleCommit, new ChatOptions(), CancellationToken.None);
 
-        var generated = (AssistantMessageResult.AssistantMessageGenerated)result;
+        AssistantMessageResult.AssistantMessageGenerated generated = (AssistantMessageResult.AssistantMessageGenerated)result;
         await Assert.That(generated.Content).IsEqualTo("[REDACTED]");
     }
 
     [Test]
     public async Task GenerateAsync_NoAllTierInPolicy_DoesNotRedactLlmOutput()
     {
-        var client = new StubChatClient("sensitive data");
-        var factory = new StubChatClientFactory(client);
-        var redactor = new TestRedactor("[REDACTED]");
-        var policy = new RedactionPolicy(
+        StubChatClient client = new StubChatClient("sensitive data");
+        StubChatClientFactory factory = new StubChatClientFactory(client);
+        TestRedactor redactor = new TestRedactor("[REDACTED]");
+        RedactionPolicy policy = new RedactionPolicy(
             new Dictionary<RedactionTier, Redactor> { [RedactionTier.Message] = redactor });
-        var writer = new LlmAssistantWriter(factory, policy);
+        LlmAssistantWriter writer = new LlmAssistantWriter(factory, policy);
 
         AssistantMessageResult result = await writer.GenerateAsync(
             "system", "user", SampleCommit, new ChatOptions(), CancellationToken.None);
 
-        var generated = (AssistantMessageResult.AssistantMessageGenerated)result;
+        AssistantMessageResult.AssistantMessageGenerated generated = (AssistantMessageResult.AssistantMessageGenerated)result;
         await Assert.That(generated.Content).IsEqualTo("sensitive data");
     }
 
     [Test]
     public async Task GenerateAsync_ForwardsChatOptionsToClient()
     {
-        var client = new OptionsCapturingChatClient();
-        var factory = new StubChatClientFactory(client);
-        var policy = new RedactionPolicy(new Dictionary<RedactionTier, Redactor>());
-        var writer = new LlmAssistantWriter(factory, policy);
+        OptionsCapturingChatClient client = new OptionsCapturingChatClient();
+        StubChatClientFactory factory = new StubChatClientFactory(client);
+        RedactionPolicy policy = new RedactionPolicy(new Dictionary<RedactionTier, Redactor>());
+        LlmAssistantWriter writer = new LlmAssistantWriter(factory, policy);
 
-        var expectedOptions = new ChatOptions
+        ChatOptions expectedOptions = new ChatOptions
         {
             ModelId = "test-model",
             Temperature = 0.5f

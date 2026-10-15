@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Removed
+
+- Removed the obsolete hardcoded `ReasoningEffortMatrix` (marked `[Obsolete]` and superseded by the models.dev-backed `ModelsDevReasoningEffortMatrix` in 0.6.0) and its test class. Supported reasoning values are now derived entirely from catalog capability data, plus the small intentional exceptions-only auto table (MiniMax M series, `deepseek-chat`).
+
+### Changed
+
+- `README.md` reasoning effort section rewritten to describe catalog-derived, option-type-driven validation instead of the old hardcoded per-model family lists.
+
 ## [0.7.0] - 2026-10-15
 
 ### Added
@@ -60,5 +70,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Hardened the capability cache, made startup non-blocking when capability data is missing, and fixed model ID normalization and dispatch.
 - Fixed Verify snapshot line-ending failures on Windows.
 
+[Unreleased]: https://github.com/alastairlundy/DiffToJson/compare/0.7.0...HEAD
 [0.7.0]: https://github.com/alastairlundy/DiffToJson/compare/0.6.0...0.7.0
 [0.6.0]: https://github.com/alastairlundy/DiffToJson/compare/0.5.1...0.6.0

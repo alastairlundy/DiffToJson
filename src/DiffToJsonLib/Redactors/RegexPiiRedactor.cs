@@ -25,11 +25,12 @@ public partial class RegexPiiRedactor : Redactor
 
     public RegexPiiRedactor()
     {
-        _regex = MyRegex();
+        _regex = MyRegex;
     }
 
-    [GeneratedRegex(@"<([^>\s]+@[^>\s]+\.[^>\s]+)>|\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b", RegexOptions.Compiled)]
-    private static partial Regex MyRegex();
+    [GeneratedRegex(@"<([^>\s]+@[^>\s]+\.[^>\s]+)>|\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b",
+        RegexOptions.Compiled | RegexOptions.ExplicitCapture)]
+    private static partial Regex MyRegex { get; }
 
     public override string Redact(string? source)
     {

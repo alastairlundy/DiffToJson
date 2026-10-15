@@ -9,14 +9,14 @@ public class GitLogParserFuzzTests
     [Test]
     public void ParseAsync_NeverThrows_OnArbitraryInput()
     {
-        var parser = new GitLogParser();
+        GitLogParser parser = new GitLogParser();
 
         Prop.ForAll(ArbMap.Default.GeneratorFor<string>().Where(s => s?.Length <= 10000).ToArbitrary(), input =>
         {
-            using var reader = new StringReader(input ?? "");
-            var commits = parser.ParseAsync(reader, default).ToListAsync().GetAwaiter().GetResult();
+            using StringReader reader = new StringReader(input ?? "");
+            List<RawCommit> commits = parser.ParseAsync(reader, CancellationToken.None).ToListAsync().GetAwaiter().GetResult();
 
-            foreach (var commit in commits)
+            foreach (RawCommit commit in commits)
             {
                 if (commit.Message == null || commit.Diff == null) return false;
             }
@@ -27,7 +27,7 @@ public class GitLogParserFuzzTests
     [Test]
     public async Task ParseAsync_ProducesValidCommits_OnDiffInput()
     {
-        var diffInput = @"commit abc123
+        string diffInput = @"commit abc123
 
 Fix something
 
@@ -40,10 +40,10 @@ index 1234567..abcdef0 100644
  unchanged
 -old line";
 
-        var parser = new GitLogParser();
-        using var reader = new StringReader(diffInput);
+        GitLogParser parser = new GitLogParser();
+        using StringReader reader = new StringReader(diffInput);
 
-        var commits = await parser.ParseAsync(reader, default).ToListAsync();
+        List<RawCommit> commits = await parser.ParseAsync(reader, default).ToListAsync();
 
         await Assert.That(commits).Count().IsEqualTo(1);
         await Assert.That(commits[0].Message).IsNotEmpty();
@@ -53,13 +53,13 @@ index 1234567..abcdef0 100644
     [Test]
     public async Task ParseAsync_EmptyOrWhitespaceInput_ProducesNoCommits()
     {
-        var inputs = new[] { "", "   ", "\n\n\n", "\r\n\r\n" };
-        var parser = new GitLogParser();
+        string[] inputs = ["", "   ", "\n\n\n", "\r\n\r\n"];
+        GitLogParser parser = new GitLogParser();
 
-        foreach (var input in inputs)
+        foreach (string input in inputs)
         {
-            using var reader = new StringReader(input);
-            var commits = await parser.ParseAsync(reader, default).ToListAsync();
+            using StringReader reader = new StringReader(input);
+            List<RawCommit> commits = await parser.ParseAsync(reader, CancellationToken.None).ToListAsync();
             await Assert.That(commits).IsEmpty();
         }
     }

@@ -15,18 +15,21 @@
  */
 
 using System.CommandLine;
+using System.IO.Abstractions;
 using CliInvoke.Extensions;
 using DiffToJsonCli.Execution;
 using DiffToJsonLib.Training;
 using DiffToJsonLib.Training.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 using DiffToJsonLib.Reasoning;
-using DiffToJsonLib.Redactors;
 using DiffToJsonLib.Writers;
 using Microsoft.Extensions.Compliance.Redaction;
-using ModelsDotDevSharp.Extensions;
 
 IServiceCollection services = new ServiceCollection();
+
+// The library only depends on System.IO.Abstractions; this is where the real
+// System.IO implementation is bound for every injected IFileSystem consumer.
+services.AddSingleton<IFileSystem, FileSystem>();
 
 services.AddCliInvoke();
 services.AddRedaction(redaction =>
@@ -36,12 +39,12 @@ services.AddRedaction(redaction =>
 
 services.AddSingleton<RedactionPolicy>(sp =>
 {
-    var redactor = sp.GetRequiredService<Redactor>();
+    Redactor redactor = sp.GetRequiredService<Redactor>();
     return new RedactionPolicy(new Dictionary<RedactionTier, Redactor>
     {
         [RedactionTier.Message] = redactor,
         [RedactionTier.Diff] = redactor,
-        [RedactionTier.All] = redactor
+        [RedactionTier.All] = redactor,
     });
 });
 services.AddSingleton<IAssistantMessageGenerator, LlmAssistantWriter>();
@@ -52,7 +55,7 @@ services.AddSingleton<IGitCommitParser, GitCommitParser>();
 services.AddSingleton<CapabilityCache>();
 services.AddSingleton<IReasoningEffortMatrix>(sp =>
 {
-    var cache = sp.GetRequiredService<CapabilityCache>();
+    CapabilityCache cache = sp.GetRequiredService<CapabilityCache>();
     return new ModelsDevReasoningEffortMatrix(cache);
 });
 services.AddSingleton<IChatOptionsBuilder, ChatOptionsBuilder>();
@@ -259,7 +262,7 @@ rootCommand.SetAction(async (result, invocationToken) =>
         endpoint.EffectiveValue,
         model.EffectiveValue));
 
-    using ServiceProvider serviceProvider = services.BuildServiceProvider();
+    await using ServiceProvider serviceProvider = services.BuildServiceProvider();
     IExtractionRunPipeline pipeline = serviceProvider.GetRequiredService<IExtractionRunPipeline>();
 
     // Ctrl+C handling is owned by System.CommandLine: invocationToken is already
@@ -271,24 +274,25 @@ rootCommand.SetAction(async (result, invocationToken) =>
         IProgress<RunProgress> progress = new ConsoleProgress();
 
         ExtractionRunFacts facts = isRaw
-            ? await pipeline.RunRawAsync(rawInput!, progress, invocationToken)
-            : await pipeline.RunTrainingAsync(trainingInput!, progress, invocationToken);
+            ? await pipeline.RunRawAsync(rawInput, progress, invocationToken)
+                .ConfigureAwait(true) : 
+            await pipeline.RunTrainingAsync(trainingInput, progress, invocationToken).ConfigureAwait(true);
 
-        await Console.Out.WriteLineAsync($"Successfully wrote {facts.RecordCount} commits to {facts.OutputPath} (License: {facts.License})");
+        await Console.Out.WriteLineAsync($"Successfully wrote {facts.RecordCount} commits to {facts.OutputPath} (License: {facts.License})").ConfigureAwait(true);
         return ExitCode.Success;
     }
     catch (Exception ex)
     {
         int exitCode = ExitCode.FromException(ex);
         string message = ex is OperationCanceledException ? "Cancelled." : $"Error: {ex.Message}";
-        await Console.Error.WriteLineAsync(message);
+        await Console.Error.WriteLineAsync(message).ConfigureAwait(true);
         return exitCode;
     }
 });
 
 ParseResult parseResult = rootCommand.Parse(args);
 
-return await parseResult.InvokeAsync();
+return await parseResult.InvokeAsync().ConfigureAwait(true);
 
 /// <summary>
 /// Synchronous progress sink: writes each <see cref="RunProgress"/> message to the

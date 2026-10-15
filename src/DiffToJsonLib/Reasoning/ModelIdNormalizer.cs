@@ -42,7 +42,7 @@ public static partial class ModelIdNormalizer
             previous = modelId;
             modelId = StripCloudSuffix(modelId);
             modelId = StripQuantizationSuffix(modelId);
-        } while (modelId != previous);
+        } while (!string.Equals(modelId, previous, StringComparison.Ordinal));
 
         modelId = TryTranslateColonToDash(modelId, availableVariants);
 
@@ -87,7 +87,7 @@ public static partial class ModelIdNormalizer
             return modelId;
 
         string sizeSuffix = modelId[(colonIndex + 1)..];
-        if (!SizePattern().IsMatch(sizeSuffix))
+        if (!SizePattern.IsMatch(sizeSuffix))
             return modelId;
 
         string candidate = $"{modelId[..colonIndex]}-{sizeSuffix}";
@@ -99,5 +99,5 @@ public static partial class ModelIdNormalizer
     }
 
     [GeneratedRegex(@"^\d+b$", RegexOptions.IgnoreCase)]
-    private static partial Regex SizePattern();
+    private static partial Regex SizePattern { get; }
 }

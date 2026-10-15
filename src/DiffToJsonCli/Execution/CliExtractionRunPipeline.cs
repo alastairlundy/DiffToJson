@@ -14,6 +14,7 @@
     limitations under the License.
 */
 
+using System.IO.Abstractions;
 using System.Runtime.CompilerServices;
 using DiffToJsonLib.Prompts;
 using DiffToJsonLib.Reasoning;
@@ -26,12 +27,13 @@ namespace DiffToJsonCli.Execution;
 /// <summary>
 /// Command line-owned <see cref="IExtractionRunPipeline"/> implementation.
 /// Ports the validation, option-wins-over-environment precedence, and dispatch
-/// behaviors out of the command entry point with console writes and exit codes removed.
+/// behaviours out of the command entry point with console writes and exit codes removed.
 /// Progress travels only through the per-call sink; failures travel as Base Class Library exceptions.
 /// Trimming-safe: no reflection, no dynamic dispatch, no per-call service location.
 /// </summary>
 public sealed class CliExtractionRunPipeline : IExtractionRunPipeline
 {
+    private readonly IFileSystem _fileSystem;
     private readonly IGitCommitParser _commitParser;
     private readonly ILicenseAnalyzer _licenseAnalyzer;
     private readonly IReasoningEffortMatrix _effortMatrix;
@@ -42,10 +44,12 @@ public sealed class CliExtractionRunPipeline : IExtractionRunPipeline
     private readonly RedactionPolicy _redactionPolicy;
 
     /// <summary>
-    /// Creates a pipeline from the existing abstractions. File discovery stays inside
-    /// this class rather than arriving as a seam. Eight constructor parameters accepted.
+    /// Creates a pipeline from the existing abstractions. File discovery travels through
+    /// the injected <see cref="IFileSystem"/> seam rather than static System.IO calls.
+    /// Nine constructor parameters accepted.
     /// </summary>
     public CliExtractionRunPipeline(
+        IFileSystem fileSystem,
         IGitCommitParser commitParser,
         ILicenseAnalyzer licenseAnalyzer,
         IReasoningEffortMatrix effortMatrix,
@@ -55,6 +59,7 @@ public sealed class CliExtractionRunPipeline : IExtractionRunPipeline
         IDiffTrainingJsonFileWriter trainingWriter,
         RedactionPolicy redactionPolicy)
     {
+        ArgumentNullException.ThrowIfNull(fileSystem);
         ArgumentNullException.ThrowIfNull(commitParser);
         ArgumentNullException.ThrowIfNull(licenseAnalyzer);
         ArgumentNullException.ThrowIfNull(effortMatrix);
@@ -64,6 +69,7 @@ public sealed class CliExtractionRunPipeline : IExtractionRunPipeline
         ArgumentNullException.ThrowIfNull(trainingWriter);
         ArgumentNullException.ThrowIfNull(redactionPolicy);
 
+        _fileSystem = fileSystem;
         _commitParser = commitParser;
         _licenseAnalyzer = licenseAnalyzer;
         _effortMatrix = effortMatrix;
@@ -94,13 +100,13 @@ public sealed class CliExtractionRunPipeline : IExtractionRunPipeline
         if (input.LlmAssistantOutput)
         {
             throw new ArgumentException(
-                "--llm-assistant-output is not compatible with --format raw.");
+                message: "--llm-assistant-output is not compatible with --format raw.");
         }
 
         if (!string.IsNullOrEmpty(input.LlmOverridePrompt) && !input.LlmAssistantOutput)
         {
             throw new ArgumentException(
-                "--llm-override-prompt requires --llm-assistant-output.");
+                "--llm-override-prompt requires --llm-assistant-output.", nameof(input));
         }
 
         RedactionTier tier = ParseRedactionTier(input.Redaction);
@@ -317,9 +323,9 @@ public sealed class CliExtractionRunPipeline : IExtractionRunPipeline
         cancellationToken.ThrowIfCancellationRequested();
 
         string workingDir = string.IsNullOrEmpty(repoDirectory)
-            ? Directory.GetCurrentDirectory()
-            : new DirectoryInfo(repoDirectory).FullName;
-        string repoName = new DirectoryInfo(workingDir).Name;
+            ? _fileSystem.Directory.GetCurrentDirectory()
+            : _fileSystem.DirectoryInfo.New(repoDirectory).FullName;
+        string repoName = _fileSystem.DirectoryInfo.New(workingDir).Name;
 
         string outputPath;
         if (string.IsNullOrEmpty(outputPathRaw))
@@ -340,20 +346,20 @@ public sealed class CliExtractionRunPipeline : IExtractionRunPipeline
             if (string.IsNullOrEmpty(endpoint))
             {
                 throw new ArgumentException(
-                    "--endpoint-url (or DIFFTOJSON_ENDPOINT) is required when --license is not provided.");
+                    "--endpoint-url (or DIFFTOJSON_ENDPOINT) is required when --license is not provided.", nameof(endpoint));
             }
 
             if (string.IsNullOrEmpty(model))
             {
                 throw new ArgumentException(
-                    "--model-id (or DIFFTOJSON_MODEL) is required when --license is not provided.");
+                    "--model-id (or DIFFTOJSON_MODEL) is required when --license is not provided.", nameof(model));
             }
         }
 
         if (llmAssistantOutput && string.IsNullOrEmpty(model))
         {
             throw new ArgumentException(
-                "--model-id (or DIFFTOJSON_MODEL) is required when --llm-assistant-output is enabled.");
+                "--model-id (or DIFFTOJSON_MODEL) is required when --llm-assistant-output is enabled.", nameof(model));
         }
 
         cancellationToken.ThrowIfCancellationRequested();
@@ -367,7 +373,7 @@ public sealed class CliExtractionRunPipeline : IExtractionRunPipeline
         else
         {
             progress?.Report(new RunProgress(RunPhase.ResolvingLicense, "Resolving license from repository directory."));
-            FileInfo? licenseFile = FindLicenseFile(workingDir);
+            IFileInfo? licenseFile = FindLicenseFile(workingDir);
             cancellationToken.ThrowIfCancellationRequested();
 
             if (licenseFile is not null)
@@ -407,14 +413,14 @@ public sealed class CliExtractionRunPipeline : IExtractionRunPipeline
             return RedactionTier.Message;
         }
 
-        if (Enum.TryParse<RedactionTier>(value, ignoreCase: true, out RedactionTier tier) &&
-            Enum.IsDefined(typeof(RedactionTier), tier))
+        if (Enum.TryParse(value, ignoreCase: true, out RedactionTier tier) &&
+            Enum.IsDefined(tier))
         {
             return tier;
         }
 
         throw new ArgumentException(
-            $"--redaction '{value}' is not a valid value. Supported values: none, message, diff, all.");
+            $"--redaction '{value}' is not a valid value. Supported values: none, message, diff, all.", nameof(value));
     }
 
     private static ReasoningEffort ParseReasoningEffort(string value)
@@ -424,8 +430,8 @@ public sealed class CliExtractionRunPipeline : IExtractionRunPipeline
             return ReasoningEffort.Auto;
         }
 
-        if (Enum.TryParse<ReasoningEffort>(value, ignoreCase: true, out ReasoningEffort effort) &&
-            Enum.IsDefined(typeof(ReasoningEffort), effort))
+        if (Enum.TryParse(value, ignoreCase: true, out ReasoningEffort effort) &&
+            Enum.IsDefined(effort))
         {
             return effort;
         }
@@ -442,7 +448,7 @@ public sealed class CliExtractionRunPipeline : IExtractionRunPipeline
         }
         catch (PromptTemplateValidationException ex)
         {
-            throw new ArgumentException(ex.Message, ex);
+            throw new ArgumentException(ex.Message, nameof(template), ex);
         }
     }
 
@@ -459,24 +465,24 @@ public sealed class CliExtractionRunPipeline : IExtractionRunPipeline
         }
         catch (PromptTemplateValidationException ex)
         {
-            throw new ArgumentException($"Error in {flagName}: {ex.Message}", ex);
+            throw new ArgumentException($"Error in {flagName}: {ex.Message}", nameof(flagName), ex);
         }
     }
 
     /// <summary>
-    /// File discovery traveling with this implementation, not a seam.
-    /// Mirrors the license-file priority order.
+    /// License-file discovery traveling through the injected file-system seam,
+    /// mirroring the license-file priority order.
     /// </summary>
-    private static FileInfo? FindLicenseFile(string workingDir)
+    private IFileInfo? FindLicenseFile(string workingDir)
     {
         string[] priorityFiles = ["LICENSE.md", "LICENSE.txt", "LICENSE"];
 
         foreach (string fileName in priorityFiles)
         {
             string path = Path.Combine(workingDir, fileName);
-            if (File.Exists(path))
+            if (_fileSystem.File.Exists(path))
             {
-                return new FileInfo(path);
+                return _fileSystem.FileInfo.New(path);
             }
         }
 

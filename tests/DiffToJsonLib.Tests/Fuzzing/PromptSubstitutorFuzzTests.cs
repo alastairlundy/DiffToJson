@@ -9,34 +9,34 @@ public class PromptSubstitutorFuzzTests
     [Test]
     public void Substitute_NeverThrows_OnFsCheckGeneratedTemplates()
     {
-        var gen = ArbMap.Default.GeneratorFor<string>().Where(s => s?.Length <= 10000);
+        Gen<string> gen = ArbMap.Default.GeneratorFor<string>().Where(s => s?.Length <= 10000);
 
         Prop.ForAll(gen.ToArbitrary(), template =>
         {
-            var result = PromptSubstitutor.Substitute(
+            string result = PromptSubstitutor.Substitute(
                 template ?? "", "d", "m", "r", "l", "u");
-            return result != null;
+            return !string.IsNullOrEmpty(result);
         }).Check(Config.Default.WithMaxTest(100));
     }
 
     [Test]
     public void Substitute_NeverThrows_OnFsCheckGeneratedValues()
     {
-        var gen = ArbMap.Default.GeneratorFor<string>().Where(s => s?.Length <= 1000);
+        Gen<string> gen = ArbMap.Default.GeneratorFor<string>().Where(s => s?.Length <= 1000);
 
         Prop.ForAll(gen.ToArbitrary(), diff =>
         {
-            var result = PromptSubstitutor.Substitute(
+            string result = PromptSubstitutor.Substitute(
                 "{diff}{commitMessage}{repoName}", diff ?? "", "msg", "repo", "MIT", "url");
-            return result != null;
+            return !string.IsNullOrEmpty(result);
         }).Check(Config.Default.WithMaxTest(100));
     }
 
     [Test]
     public async Task Substitute_NeverThrows_OnFixedCases()
     {
-        var testCases = new[]
-        {
+        (string, string, string, string, string, string)[] testCases =
+        [
             ("", "", "", "", "", ""),
             ("{diff}", "val", "", "", "", ""),
             ("{commitMessage}", "", "msg", "", "", ""),
@@ -45,12 +45,12 @@ public class PromptSubstitutorFuzzTests
             ("{repoUrl}", "", "", "", "", "https://example.com"),
             ("{unknown}", "d", "m", "r", "l", "u"),
             (new string('x', 1000), "d", "m", "r", "l", "u"),
-            ("{diff}{commitMessage}{repoName}{license}{repoUrl}", "d", "m", "r", "l", "u"),
-        };
+            ("{diff}{commitMessage}{repoName}{license}{repoUrl}", "d", "m", "r", "l", "u")
+        ];
 
-        foreach (var (template, diff, commitMessage, repoName, license, repoUrl) in testCases)
+        foreach ((string template, string diff, string commitMessage, string repoName, string license, string repoUrl) in testCases)
         {
-            var result = PromptSubstitutor.Substitute(template, diff, commitMessage, repoName, license, repoUrl);
+            string result = PromptSubstitutor.Substitute(template, diff, commitMessage, repoName, license, repoUrl);
             await Assert.That(result).IsNotNull();
         }
     }
@@ -58,7 +58,7 @@ public class PromptSubstitutorFuzzTests
     [Test]
     public async Task Substitute_ReplacesKnownPlaceholders()
     {
-        var result = PromptSubstitutor.Substitute(
+        string result = PromptSubstitutor.Substitute(
             "Diff: {diff}\nMessage: {commitMessage}\nRepo: {repoName}",
             "my-diff",
             "my-message",
@@ -74,14 +74,14 @@ public class PromptSubstitutorFuzzTests
     [Test]
     public async Task Substitute_EmptyTemplate_ReturnsEmpty()
     {
-        var result = PromptSubstitutor.Substitute("", "diff", "msg", "repo", "lic", "url");
+        string result = PromptSubstitutor.Substitute("", "diff", "msg", "repo", "lic", "url");
         await Assert.That(result).IsEqualTo("");
     }
 
     [Test]
     public async Task Substitute_PreservesUnknownPlaceholders()
     {
-        var result = PromptSubstitutor.Substitute(
+        string result = PromptSubstitutor.Substitute(
             "{unknown} and {diff}",
             "actual-diff",
             "",

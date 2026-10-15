@@ -63,7 +63,7 @@ public class ChatClientFactory : IChatClientFactory
         if (string.IsNullOrEmpty(_provider))
             ArgumentException.ThrowIfNullOrEmpty(_apiKey);
 
-        switch (_provider.ToLower())
+        switch (_provider.ToLower(System.Globalization.CultureInfo.CurrentCulture))
         {
             case "anthropic-compatible":
             {

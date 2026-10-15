@@ -14,26 +14,37 @@
    limitations under the License.
  */
 
+using System.IO.Abstractions;
 using System.Text.Json;
 
 namespace DiffToJsonLib.Writers;
 
 public class DiffTrainingJsonFileWriter : IDiffTrainingJsonFileWriter
 {
+    private readonly IFileSystem _fileSystem;
+
+    public DiffTrainingJsonFileWriter(IFileSystem fileSystem)
+    {
+        ArgumentNullException.ThrowIfNull(fileSystem);
+        _fileSystem = fileSystem;
+    }
+
     public async Task WriteToJsonFileAsync(IAsyncEnumerable<CommitTrainingRecord> records, string filePath,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(filePath);
 
-        await using StreamWriter streamWriter = new(filePath);
-
-        await foreach (CommitTrainingRecord record in records.WithCancellation(cancellationToken))
+        StreamWriter streamWriter = _fileSystem.File.CreateText(filePath);
+        await using (streamWriter.ConfigureAwait(false))
         {
-            string json = JsonSerializer.Serialize(record, CommitTrainingJsonContext.Default.CommitTrainingRecord);
+            await foreach (CommitTrainingRecord record in records.WithCancellation(cancellationToken).ConfigureAwait(false))
+            {
+                string json = JsonSerializer.Serialize(record, CommitTrainingJsonContext.Default.CommitTrainingRecord);
 
-            await streamWriter.WriteLineAsync(json);
+                await streamWriter.WriteLineAsync(json).ConfigureAwait(false);
+            }
+
+            streamWriter.Close();
         }
-
-        streamWriter.Close();
     }
 }

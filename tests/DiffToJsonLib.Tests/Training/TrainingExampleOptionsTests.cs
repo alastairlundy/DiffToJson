@@ -10,8 +10,8 @@ public class TrainingExampleOptionsTests
     [Test]
     public async Task Constructs_WithAllFiveFields()
     {
-        var template = new PromptTemplate("system", "user");
-        var options = new TrainingExampleOptions(
+        PromptTemplate template = new PromptTemplate("system", "user");
+        TrainingExampleOptions options = new TrainingExampleOptions(
             template,
             LlmOverridePrompt: "override",
             LlmAssistantOutput: true,
@@ -28,7 +28,7 @@ public class TrainingExampleOptionsTests
     [Test]
     public async Task Allows_NullLlmOverridePrompt()
     {
-        var options = new TrainingExampleOptions(
+        TrainingExampleOptions options = new TrainingExampleOptions(
             new PromptTemplate("s", "u"),
             LlmOverridePrompt: null,
             LlmAssistantOutput: false,
@@ -41,7 +41,7 @@ public class TrainingExampleOptionsTests
     [Test]
     public async Task Allows_LlmAssistantOutputFalse()
     {
-        var options = new TrainingExampleOptions(
+        TrainingExampleOptions options = new TrainingExampleOptions(
             new PromptTemplate("s", "u"),
             LlmOverridePrompt: null,
             LlmAssistantOutput: false,
@@ -54,10 +54,10 @@ public class TrainingExampleOptionsTests
     [Test]
     public async Task Record_Equality()
     {
-        var chatOptions = new ChatOptions();
-        var a = new TrainingExampleOptions(
+        ChatOptions chatOptions = new ChatOptions();
+        TrainingExampleOptions a = new TrainingExampleOptions(
             new PromptTemplate("s", "u"), "override", true, RedactionTier.Message, chatOptions);
-        var b = new TrainingExampleOptions(
+        TrainingExampleOptions b = new TrainingExampleOptions(
             new PromptTemplate("s", "u"), "override", true, RedactionTier.Message, chatOptions);
 
         await Assert.That(a).IsEqualTo(b);
@@ -66,9 +66,9 @@ public class TrainingExampleOptionsTests
     [Test]
     public async Task Record_Inequality()
     {
-        var a = new TrainingExampleOptions(
+        TrainingExampleOptions a = new TrainingExampleOptions(
             new PromptTemplate("s", "u"), "override", true, RedactionTier.Message, new ChatOptions());
-        var b = new TrainingExampleOptions(
+        TrainingExampleOptions b = new TrainingExampleOptions(
             new PromptTemplate("s", "u"), "other", true, RedactionTier.Message, new ChatOptions());
 
         await Assert.That(a).IsNotEqualTo(b);

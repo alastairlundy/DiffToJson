@@ -19,6 +19,7 @@
 
   <ItemGroup>
     <PackageReference Include="FsCheck" />
+    <PackageReference Include="TestableIO.System.IO.Abstractions.TestingHelpers" />
     <PackageReference Include="TUnit" />
   </ItemGroup>
 

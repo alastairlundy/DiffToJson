@@ -67,7 +67,7 @@ public static partial class PromptPresets
     /// <returns>The matching <see cref="PromptTemplate"/>.</returns>
     /// <exception cref="KeyNotFoundException">Thrown when <paramref name="name"/> is not a known preset.</exception>
     public static PromptTemplate Get(string name) =>
-        _presets.TryGetValue(name, out var template)
+        _presets.TryGetValue(name, out PromptTemplate? template)
             ? template
             : throw new KeyNotFoundException(
                 $"Unknown prompt preset '{name}'. Valid presets: {string.Join(", ", _presets.Keys)}.");
@@ -86,7 +86,7 @@ public static partial class PromptPresets
     /// </exception>
     public static void ValidateTemplate(PromptTemplate template)
     {
-        Regex regex = PlaceholderPattern();
+        Regex regex = PlaceholderPattern;
 
         foreach (string field in new[] { template.System, template.User })
         {
@@ -110,5 +110,5 @@ public static partial class PromptPresets
     }
 
     [GeneratedRegex(@"\{(\w+)\}")]
-    private static partial Regex PlaceholderPattern();
+    private static partial Regex PlaceholderPattern { get; }
 }

@@ -9,5 +9,5 @@ public enum ReasoningEffort
     Medium,
     High,
     XHigh,
-    Max
+    Max,
 }

@@ -35,14 +35,14 @@ public class RedactionPolicyTests
 
     private static RedactionPolicy CreatePolicy(RedactionTier tier)
     {
-        var redactor = new TestRedactor("secret[a-z0-9=@.]*", "[REDACTED]");
+        TestRedactor redactor = new TestRedactor("secret[a-z0-9=@.]*", "[REDACTED]");
         return new RedactionPolicy(new Dictionary<RedactionTier, Redactor> { [tier] = redactor });
     }
 
     [Test]
     public async Task RedactCommit_NoneTier_ReturnsInputUnchanged()
     {
-        var policy = CreatePolicy(RedactionTier.Message);
+        RedactionPolicy policy = CreatePolicy(RedactionTier.Message);
         CommitRecord result = policy.Redact(SampleCommit, RedactionTier.None);
 
         await Assert.That(result).IsSameReferenceAs(SampleCommit);
@@ -51,8 +51,8 @@ public class RedactionPolicyTests
     [Test]
     public async Task RedactCommit_MissingTier_ReturnsInputUnchanged()
     {
-        var redactor = new TestRedactor("secret[a-z0-9=@.]*", "[REDACTED]");
-        var policy = new RedactionPolicy(
+        TestRedactor redactor = new TestRedactor("secret[a-z0-9=@.]*", "[REDACTED]");
+        RedactionPolicy policy = new RedactionPolicy(
             new Dictionary<RedactionTier, Redactor> { [RedactionTier.Message] = redactor });
 
         CommitRecord result = policy.Redact(SampleCommit, RedactionTier.Diff);
@@ -63,7 +63,7 @@ public class RedactionPolicyTests
     [Test]
     public async Task RedactCommit_MessageTier_RedactsOnlyCommitMessage()
     {
-        var policy = CreatePolicy(RedactionTier.Message);
+        RedactionPolicy policy = CreatePolicy(RedactionTier.Message);
         CommitRecord result = policy.Redact(SampleCommit, RedactionTier.Message);
 
         await Assert.That(result.Diff).IsEqualTo(SampleCommit.Diff);
@@ -73,7 +73,7 @@ public class RedactionPolicyTests
     [Test]
     public async Task RedactCommit_DiffTier_RedactsOnlyDiff()
     {
-        var policy = CreatePolicy(RedactionTier.Diff);
+        RedactionPolicy policy = CreatePolicy(RedactionTier.Diff);
         CommitRecord result = policy.Redact(SampleCommit, RedactionTier.Diff);
 
         await Assert.That(result.Diff).IsEqualTo("added [REDACTED] stuff");
@@ -83,7 +83,7 @@ public class RedactionPolicyTests
     [Test]
     public async Task RedactCommit_AllTier_RedactsBoth()
     {
-        var policy = CreatePolicy(RedactionTier.All);
+        RedactionPolicy policy = CreatePolicy(RedactionTier.All);
         CommitRecord result = policy.Redact(SampleCommit, RedactionTier.All);
 
         await Assert.That(result.Diff).IsEqualTo("added [REDACTED] stuff");
@@ -93,7 +93,7 @@ public class RedactionPolicyTests
     [Test]
     public async Task RedactCommit_OriginalIsNotMutated()
     {
-        var policy = CreatePolicy(RedactionTier.All);
+        RedactionPolicy policy = CreatePolicy(RedactionTier.All);
         CommitRecord original = SampleCommit with { };
         _ = policy.Redact(SampleCommit, RedactionTier.All);
 
@@ -104,7 +104,7 @@ public class RedactionPolicyTests
     [Test]
     public async Task RedactString_NoneTier_ReturnsInputUnchanged()
     {
-        var policy = CreatePolicy(RedactionTier.All);
+        RedactionPolicy policy = CreatePolicy(RedactionTier.All);
         string result = policy.Redact("hello secret@example.com world", RedactionTier.None);
 
         await Assert.That(result).IsEqualTo("hello secret@example.com world");
@@ -113,8 +113,8 @@ public class RedactionPolicyTests
     [Test]
     public async Task RedactString_MissingTier_ReturnsInputUnchanged()
     {
-        var redactor = new TestRedactor("secret[a-z0-9=@.]*", "[REDACTED]");
-        var policy = new RedactionPolicy(
+        TestRedactor redactor = new TestRedactor("secret[a-z0-9=@.]*", "[REDACTED]");
+        RedactionPolicy policy = new RedactionPolicy(
             new Dictionary<RedactionTier, Redactor> { [RedactionTier.Message] = redactor });
 
         string result = policy.Redact("keep secret=1234", RedactionTier.Diff);
@@ -125,7 +125,7 @@ public class RedactionPolicyTests
     [Test]
     public async Task RedactString_PresentTier_RedactsText()
     {
-        var policy = CreatePolicy(RedactionTier.All);
+        RedactionPolicy policy = CreatePolicy(RedactionTier.All);
         string result = policy.Redact("contact secret@example.com now", RedactionTier.All);
 
         await Assert.That(result).IsEqualTo("contact [REDACTED] now");

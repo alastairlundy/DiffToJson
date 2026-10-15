@@ -48,12 +48,17 @@
     <ItemGroup>
       <PackageReference Include="Anthropic" />
       <PackageReference Include="CliInvoke.Core"/>
+      <PackageReference Include="Meziantou.Analyzer">
+        <PrivateAssets>all</PrivateAssets>
+        <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      </PackageReference>
       <PackageReference Include="Microsoft.Extensions.AI.Abstractions"/>
       <PackageReference Include="ModelsDotDevSharp"/>
       <PackageReference Include="Microsoft.Extensions.AI.OpenAI" />
       <PackageReference Include="Microsoft.Extensions.Compliance.Redaction"/>
       <PackageReference Include="OllamaSharp" />
       <PackageReference Include="Kevlar" />
+      <PackageReference Include="TestableIO.System.IO.Abstractions" />
     </ItemGroup>
 
 </Project>

@@ -30,11 +30,11 @@ public class GitLogParser
         StringBuilder messageBuilder = new();
         StringBuilder diffBuilder = new();
 
-        while ((line = await reader.ReadLineAsync(ct)) != null)
+        while ((line = await reader.ReadLineAsync(ct).ConfigureAwait(false)) != null)
         {
-            line = line.Replace("\r\n", "\n").Replace("\r", "\n");
+            line = line.Replace("\r\n", "\n", StringComparison.OrdinalIgnoreCase).Replace('\r', '\n');
 
-            if (line.StartsWith("commit "))
+            if (line.StartsWith("commit ", StringComparison.OrdinalIgnoreCase))
             {
                 if (messageBuilder.Length > 0 && !string.IsNullOrWhiteSpace(diffBuilder.ToString()))
                 {
@@ -49,7 +49,7 @@ public class GitLogParser
                 isCollectingMessage = false;
                 isCollectingDiff = false;
             }
-            else if (line.StartsWith("Author: ") || line.StartsWith("Date: "))
+            else if (line.StartsWith("Author: ", StringComparison.Ordinal) || line.StartsWith("Date: ", StringComparison.Ordinal))
             {
             }
             else if (!isCollectingDiff && !string.IsNullOrWhiteSpace(line) && !isCollectingMessage)
@@ -59,7 +59,7 @@ public class GitLogParser
             }
             else if (!isCollectingDiff && (isCollectingMessage || string.IsNullOrWhiteSpace(line)))
             {
-                if (line.StartsWith("diff --git"))
+                if (line.StartsWith("diff --git", StringComparison.OrdinalIgnoreCase))
                 {
                     isCollectingDiff = true;
                 }
@@ -68,7 +68,7 @@ public class GitLogParser
                     messageBuilder.Append(line).Append('\n');
                 }
             }
-            else if (line.StartsWith("diff --git"))
+            else if (line.StartsWith("diff --git", StringComparison.OrdinalIgnoreCase))
             {
                 isCollectingDiff = true;
             }

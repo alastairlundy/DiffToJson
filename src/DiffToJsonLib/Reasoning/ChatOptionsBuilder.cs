@@ -107,6 +107,7 @@ public sealed class ChatOptionsBuilder : IChatOptionsBuilder
         }
     }
 
+    //TODO: Find out why provider is a parameter if it's never used.
     private static void BuildBudgetChatOptions(ChatOptions options, ReasoningEffort effort, string provider)
     {
         if (effort == ReasoningEffort.Off)
@@ -129,16 +130,16 @@ public sealed class ChatOptionsBuilder : IChatOptionsBuilder
         long budgetTokens = Math.Max((long)Math.Floor(maxTokens * fraction), 1024);
 
         options.AdditionalProperties ??= new AdditionalPropertiesDictionary();
-        options.AdditionalProperties["thinking"] = new Dictionary<string, object>
+        options.AdditionalProperties["thinking"] = new Dictionary<string, object>(StringComparer.Ordinal)
         {
             ["type"] = "enabled",
-            ["budget_tokens"] = budgetTokens
+            ["budget_tokens"] = budgetTokens,
         };
     }
 
     private static void BuildToggleChatOptions(ChatOptions options, ReasoningEffort effort, string provider)
     {
-        // Type-driven per T005: Toggle maps to the nearest on/off builder.
+        // Type-driven: Toggle maps to the nearest on/off builder.
         // Ollama/Qwen3 uses chat_template_kwargs; MiniMax, DeepSeek and other
         // Toggle providers use the MiniMax-style thinking string (adaptive/enabled/disabled).
         string canonical = ModelsDevProviderMap.Normalize(provider);
@@ -152,6 +153,7 @@ public sealed class ChatOptionsBuilder : IChatOptionsBuilder
                  string.Equals(canonical, "openai", StringComparison.OrdinalIgnoreCase) ||
                  string.Equals(canonical, "openrouter", StringComparison.OrdinalIgnoreCase))
         {
+            //TODO: Address this weird else if and else both calling the same code
             BuildMiniMaxToggleChatOptions(options, effort);
         }
         else
@@ -169,7 +171,7 @@ public sealed class ChatOptionsBuilder : IChatOptionsBuilder
         };
 
         options.AdditionalProperties ??= new AdditionalPropertiesDictionary();
-        options.AdditionalProperties["chat_template_kwargs"] = new Dictionary<string, object>
+        options.AdditionalProperties["chat_template_kwargs"] = new Dictionary<string, object>(StringComparer.Ordinal)
         {
             ["enable_thinking"] = enableThinking
         };
@@ -181,13 +183,14 @@ public sealed class ChatOptionsBuilder : IChatOptionsBuilder
         {
             ReasoningEffort.Off => "disabled",
             ReasoningEffort.Auto => "adaptive",
-            _ => "enabled"
+            _ => "enabled",
         };
 
         options.AdditionalProperties ??= new AdditionalPropertiesDictionary();
         options.AdditionalProperties["thinking"] = thinkingType;
     }
 
+    //TODO: Find out why this exists if it's not used.
     private static void ApplyNonCoTFallback(ChatOptions options, ReasoningEffort effort, string provider)
     {
     }

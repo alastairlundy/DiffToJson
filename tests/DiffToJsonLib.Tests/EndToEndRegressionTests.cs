@@ -7,7 +7,6 @@ using DiffToJsonLib.Prompts;
 using DiffToJsonLib.Redactors;
 using DiffToJsonLib.Tests.Fixtures;
 using DiffToJsonLib.Training;
-using DiffToJsonLib.Training.Abstractions;
 using DiffToJsonLib.Writers;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Compliance.Redaction;
@@ -92,23 +91,23 @@ public class EndToEndRegressionTests
     [Test]
     public async Task TrainingPath()
     {
-        var policy = CreateEmptyPolicy();
-        var stubClient = new StubChatClient("This is an AI-generated summary of the changes.");
-        var factory = new StubChatClientFactory(stubClient);
-        var assistant = new LlmAssistantWriter(factory, policy);
-        var builder = new TrainingExampleBuilder(policy, assistant);
-        var template = PromptPresets.Get("default");
-        var options = new TrainingExampleOptions(
+        RedactionPolicy policy = CreateEmptyPolicy();
+        StubChatClient stubClient = new StubChatClient("This is an AI-generated summary of the changes.");
+        StubChatClientFactory factory = new StubChatClientFactory(stubClient);
+        LlmAssistantWriter assistant = new LlmAssistantWriter(factory, policy);
+        TrainingExampleBuilder builder = new TrainingExampleBuilder(policy, assistant);
+        PromptTemplate template = PromptPresets.Get("default");
+        TrainingExampleOptions options = new TrainingExampleOptions(
             template, null, true, RedactionTier.None, new ChatOptions());
 
-        var commits = LoadCommitsFromFixture();
-        var records = await builder
+        IAsyncEnumerable<CommitRecord> commits = LoadCommitsFromFixture();
+        List<CommitTrainingRecord> records = await builder
             .BuildAsync(commits, options, CancellationToken.None)
             .ToListAsync(cancellationToken: CancellationToken.None);
 
-        var jsonLines = records.Select(r =>
+        IEnumerable<string> jsonLines = records.Select(r =>
             JsonSerializer.Serialize(r, CommitTrainingJsonContext.Default.CommitTrainingRecord));
-        var actualJsonl = string.Join(Environment.NewLine, jsonLines);
+        string actualJsonl = string.Join(Environment.NewLine, jsonLines);
 
         await AssertMatchesGoldenFileAsync(actualJsonl, nameof(TrainingPath));
     }
@@ -116,23 +115,23 @@ public class EndToEndRegressionTests
     [Test]
     public async Task LlmFailurePath()
     {
-        var policy = CreateEmptyPolicy();
-        var failingClient = new ThrowingChatClient();
-        var factory = new StubChatClientFactory(failingClient);
-        var assistant = new LlmAssistantWriter(factory, policy);
-        var builder = new TrainingExampleBuilder(policy, assistant);
-        var template = PromptPresets.Get("default");
-        var options = new TrainingExampleOptions(
+        RedactionPolicy policy = CreateEmptyPolicy();
+        ThrowingChatClient failingClient = new ThrowingChatClient();
+        StubChatClientFactory factory = new StubChatClientFactory(failingClient);
+        LlmAssistantWriter assistant = new LlmAssistantWriter(factory, policy);
+        TrainingExampleBuilder builder = new TrainingExampleBuilder(policy, assistant);
+        PromptTemplate template = PromptPresets.Get("default");
+        TrainingExampleOptions options = new TrainingExampleOptions(
             template, null, true, RedactionTier.None, new ChatOptions());
 
-        var commits = LoadCommitsFromFixture();
-        var records = await builder
+        IAsyncEnumerable<CommitRecord> commits = LoadCommitsFromFixture();
+        List<CommitTrainingRecord> records = await builder
             .BuildAsync(commits, options, CancellationToken.None)
             .ToListAsync(cancellationToken: CancellationToken.None);
 
-        var jsonLines = records.Select(r =>
+        IEnumerable<string> jsonLines = records.Select(r =>
             JsonSerializer.Serialize(r, CommitTrainingJsonContext.Default.CommitTrainingRecord));
-        var actualJsonl = string.Join(Environment.NewLine, jsonLines);
+        string actualJsonl = string.Join(Environment.NewLine, jsonLines);
 
         await AssertMatchesGoldenFileAsync(actualJsonl, nameof(LlmFailurePath));
     }

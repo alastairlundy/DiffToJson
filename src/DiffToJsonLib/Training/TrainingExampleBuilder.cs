@@ -35,11 +35,11 @@ public sealed class TrainingExampleBuilder
         TrainingExampleOptions options,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        await foreach (var commit in source.WithCancellation(cancellationToken))
+        await foreach (CommitRecord commit in source.WithCancellation(cancellationToken).ConfigureAwait(false))
         {
-            var redactedCommit = _redactor.Redact(commit, options.Tier);
+            CommitRecord redactedCommit = _redactor.Redact(commit, options.Tier);
 
-            var systemContent = PromptSubstitutor.Substitute(
+            string systemContent = PromptSubstitutor.Substitute(
                 options.Template.System,
                 redactedCommit.Diff,
                 redactedCommit.CommitMessage,
@@ -74,8 +74,8 @@ public sealed class TrainingExampleBuilder
 
             if (options.LlmAssistantOutput)
             {
-                var result = await _assistant.GenerateAsync(
-                    systemContent, userContent, redactedCommit, options.Options, cancellationToken);
+                AssistantMessageResult result = await _assistant.GenerateAsync(
+                    systemContent, userContent, redactedCommit, options.Options, cancellationToken).ConfigureAwait(false);
 
                 switch (result)
                 {
@@ -99,17 +99,17 @@ public sealed class TrainingExampleBuilder
                 originalAssistantMessage = null;
             }
 
-            var messages = new Message[]
-            {
+            Message[] messages =
+            [
                 new("system", systemContent),
                 new("user", userContent),
-                new("assistant", assistantContent)
-            };
+                new("assistant", assistantContent),
+            ];
 
             yield return new CommitTrainingRecord(
                 Messages: messages,
-                Provenance: new Provenance(redactedCommit.RepoName, redactedCommit.RepoUrl),
-                Legal: new Legal(redactedCommit.License),
+                new Provenance(redactedCommit.RepoName, redactedCommit.RepoUrl),
+                new Legal(redactedCommit.License),
                 OriginalAssistantMessage: originalAssistantMessage
             );
         }

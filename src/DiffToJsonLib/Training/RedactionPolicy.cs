@@ -15,8 +15,6 @@
  */
 
 using Microsoft.Extensions.Compliance.Redaction;
-using DiffToJsonLib.Models;
-using DiffToJsonLib.Redactors;
 
 namespace DiffToJsonLib.Training;
 
@@ -31,7 +29,7 @@ public sealed class RedactionPolicy
 
     public CommitRecord Redact(CommitRecord commit, RedactionTier tier)
     {
-        if (tier == RedactionTier.None || !_redactors.TryGetValue(tier, out var redactor))
+        if (tier == RedactionTier.None || !_redactors.TryGetValue(tier, out Redactor? redactor))
         {
             return commit;
         }
@@ -51,7 +49,7 @@ public sealed class RedactionPolicy
 
     public string Redact(string text, RedactionTier tier)
     {
-        if (tier == RedactionTier.None || !_redactors.TryGetValue(tier, out var redactor))
+        if (tier == RedactionTier.None || !_redactors.TryGetValue(tier, out Redactor? redactor))
         {
             return text;
         }

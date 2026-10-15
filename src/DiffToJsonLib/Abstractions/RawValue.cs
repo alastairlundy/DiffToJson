@@ -28,59 +28,18 @@ public sealed record RawValue(string OptionValue, string EnvironmentValue)
     /// Empty string means unset.
     /// </summary>
     public string EffectiveValue =>
-        !string.IsNullOrEmpty(OptionValue) ? OptionValue : (EnvironmentValue ?? string.Empty);
+        !string.IsNullOrEmpty(OptionValue) ? OptionValue : (EnvironmentValue);
 
     /// <summary>
     /// Resolves the effective value with option winning over environment.
     /// Empty string means unset on both halves.
     /// </summary>
-    public static string Resolve(string optionValue, string environmentValue) =>
+    public static string Resolve(string optionValue, string? environmentValue) =>
         !string.IsNullOrEmpty(optionValue) ? optionValue : (environmentValue ?? string.Empty);
 
     /// <summary>
     /// Creates a <see cref="RawValue"/> from raw option and environment halves.
     /// </summary>
-    public static RawValue From(string optionValue, string environmentValue) =>
+    public static RawValue From(string? optionValue, string? environmentValue) =>
         new(optionValue ?? string.Empty, environmentValue ?? string.Empty);
 }
-
-/// <summary>
-/// Input for a raw extraction run. Flat record with no shared base.
-/// All strings use empty string to mean unset. No parsing is performed here.
-/// </summary>
-public sealed record RunRawInput(
-    string RepoDirectory,
-    string RepoUrl,
-    string License,
-    string OutputPath,
-    string Redaction,
-    string ReasoningEffort,
-    bool LlmAssistantOutput,
-    string LlmOverridePrompt,
-    RawValue Provider,
-    RawValue Credential,
-    RawValue Endpoint,
-    RawValue Model);
-
-/// <summary>
-/// Input for a training extraction run. Flat record with no shared base.
-/// Common field names stay identical to <see cref="RunRawInput"/>; any new
-/// common field is added to both records. Prompt fields live on this record.
-/// All strings use empty string to mean unset. No parsing is performed here.
-/// </summary>
-public sealed record RunTrainingInput(
-    string RepoDirectory,
-    string RepoUrl,
-    string License,
-    string OutputPath,
-    string Redaction,
-    string ReasoningEffort,
-    bool LlmAssistantOutput,
-    string LlmOverridePrompt,
-    RawValue Provider,
-    RawValue Credential,
-    RawValue Endpoint,
-    RawValue Model,
-    string PromptStyle,
-    string SystemPromptOverride,
-    string UserPromptOverride);

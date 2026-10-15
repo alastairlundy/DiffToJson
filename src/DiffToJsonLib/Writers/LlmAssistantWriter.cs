@@ -14,8 +14,6 @@
    limitations under the License.
  */
 
-using DiffToJsonLib.Models;
-using DiffToJsonLib.Redactors;
 using DiffToJsonLib.Training;
 using DiffToJsonLib.Training.Abstractions;
 using Kevlar;
@@ -52,8 +50,8 @@ public class LlmAssistantWriter : IAssistantMessageGenerator
         try
         {
             ChatResponse? response = await _pipeline.ExecuteAsync(
-                async ct => await client.GetResponseAsync([system, user], options, ct),
-                cancellationToken);
+                async ct => await client.GetResponseAsync([system, user], options, ct).ConfigureAwait(false),
+                cancellationToken).ConfigureAwait(false);
 
             ChatMessage? assistantMessage = response.Messages
                 .FirstOrDefault(m => m.Role == ChatRole.Assistant);
@@ -65,15 +63,17 @@ public class LlmAssistantWriter : IAssistantMessageGenerator
                     OriginalAssistantMessage: redactedCommit.CommitMessage);
             }
 
-            List<string> reasoningItems = assistantMessage.Contents
-                .OfType<TextReasoningContent>()
-                .Select(r => r.Text)
-                .ToList();
+            List<string> reasoningItems =
+            [
+                .. assistantMessage.Contents
+                    .OfType<TextReasoningContent>()
+                    .Select(r => r.Text)
+            ];
 
-            string visibleText = assistantMessage.Text ?? "";
+            string visibleText = assistantMessage.Text;
 
             string composed = reasoningItems.Count > 0
-                ? $"<think>{string.Join("\n", reasoningItems)}</think>\n\n{visibleText}"
+                ? $"<think>{string.Join('\n', reasoningItems)}</think>\n\n{visibleText}"
                 : visibleText;
 
             string result = composed.Trim();

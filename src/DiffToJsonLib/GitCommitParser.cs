@@ -42,14 +42,14 @@ public class GitCommitParser : IGitCommitParser
         BufferedProcessResult processResult = await _processInvoker.ExecuteBufferedAsync(processConfiguration,
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
-        return processResult.StandardOutput ?? string.Empty;
+        return processResult.StandardOutput;
     }
     
     public async Task<CommitRecord[]> ParseCommitsToArrayAsync(string repoName, string license,
         string workingDir, string repoUrl, CancellationToken cancellationToken)
     {
         return await ParseCommitsStreamAsync(repoName, license, workingDir, repoUrl, cancellationToken)
-            .ToArrayAsync(cancellationToken: cancellationToken);
+            .ToArrayAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
     public async IAsyncEnumerable<CommitRecord> ParseCommitsStreamAsync(string repoName, string license, string workingDir,
@@ -61,10 +61,9 @@ public class GitCommitParser : IGitCommitParser
 
         GitLogParser gitLogParser = new();
 
-        await foreach (RawCommit raw in gitLogParser.ParseAsync(reader, cancellationToken))
+        await foreach (RawCommit raw in gitLogParser.ParseAsync(reader, cancellationToken).ConfigureAwait(false))
         {
             yield return new CommitRecord(raw.Diff, raw.Message, repoName, license, repoUrl);
         }
     }
-
 }

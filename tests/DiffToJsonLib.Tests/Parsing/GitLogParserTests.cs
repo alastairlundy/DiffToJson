@@ -16,7 +16,7 @@ public class GitLogParserTests
         GitLogParser parser = new();
         using StreamReader reader = new(FixturePath);
 
-        List<RawCommit> commits = await parser.ParseAsync(reader, default).ToListAsync();
+        List<RawCommit> commits = await parser.ParseAsync(reader, CancellationToken.None).ToListAsync();
 
         await Assert.That(commits).Count().IsEqualTo(2);
     }
@@ -27,7 +27,7 @@ public class GitLogParserTests
         GitLogParser parser = new();
         using StreamReader reader = new(FixturePath);
 
-        List<RawCommit> commits = await parser.ParseAsync(reader, default).ToListAsync();
+        List<RawCommit> commits = await parser.ParseAsync(reader, CancellationToken.None).ToListAsync();
 
         await Assert.That(commits[0].Message).IsEqualTo("Add user authentication module\n\n    Implement login and registration endpoints with JWT token generation.");
     }
@@ -38,7 +38,7 @@ public class GitLogParserTests
         GitLogParser parser = new();
         using StreamReader reader = new(FixturePath);
 
-        List<RawCommit> commits = await parser.ParseAsync(reader, default).ToListAsync();
+        List<RawCommit> commits = await parser.ParseAsync(reader, CancellationToken.None).ToListAsync();
 
         await Assert.That(commits[1].Message).IsEqualTo("Fix null reference in data pipeline");
     }
@@ -49,7 +49,7 @@ public class GitLogParserTests
         GitLogParser parser = new();
         using StreamReader reader = new(FixturePath);
 
-        List<RawCommit> commits = await parser.ParseAsync(reader, default).ToListAsync();
+        List<RawCommit> commits = await parser.ParseAsync(reader, CancellationToken.None).ToListAsync();
 
         await Assert.That(commits[0].Diff).Contains("LoginHandler");
         await Assert.That(commits[0].Diff).Contains("RegisterHandler");
@@ -61,7 +61,7 @@ public class GitLogParserTests
         GitLogParser parser = new();
         using StreamReader reader = new(FixturePath);
 
-        List<RawCommit> commits = await parser.ParseAsync(reader, default).ToListAsync();
+        List<RawCommit> commits = await parser.ParseAsync(reader, CancellationToken.None).ToListAsync();
 
         await Assert.That(commits[1].Diff).Contains("DataPipeline");
         await Assert.That(commits[1].Diff).Contains("DefaultConfig");
@@ -73,7 +73,7 @@ public class GitLogParserTests
         GitLogParser parser = new();
         using StringReader reader = new(string.Empty);
 
-        List<RawCommit> commits = await parser.ParseAsync(reader, default).ToListAsync();
+        List<RawCommit> commits = await parser.ParseAsync(reader, CancellationToken.None).ToListAsync();
 
         await Assert.That(commits).IsEmpty();
     }

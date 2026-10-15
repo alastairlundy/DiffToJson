@@ -14,41 +14,54 @@
    limitations under the License.
  */
 
+using System.IO.Abstractions;
 using System.Text.Json;
 
 namespace DiffToJsonLib.Writers;
 
 public class DiffJsonFileWriter : IDiffJsonFileWriter
 {
+    private readonly IFileSystem _fileSystem;
+
+    public DiffJsonFileWriter(IFileSystem fileSystem)
+    {
+        ArgumentNullException.ThrowIfNull(fileSystem);
+        _fileSystem = fileSystem;
+    }
+
     public async Task WriteToJsonFileAsync(IAsyncEnumerable<CommitRecord> commits, string filePath, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(filePath);
 
-        await using StreamWriter streamWriter =  new(filePath);
-        
-        await foreach (CommitRecord record in commits.WithCancellation(cancellationToken))
+        StreamWriter streamWriter = _fileSystem.File.CreateText(filePath);
+        await using (streamWriter.ConfigureAwait(false))
         {
-            string json = JsonSerializer.Serialize(record, CommitJsonContext.Default.CommitRecord);
+            await foreach (CommitRecord record in commits.WithCancellation(cancellationToken).ConfigureAwait(false))
+            {
+                string json = JsonSerializer.Serialize(record, CommitJsonContext.Default.CommitRecord);
 
-            await streamWriter.WriteLineAsync(json);
-        }
+                await streamWriter.WriteLineAsync(json).ConfigureAwait(false);
+            }
         
-        streamWriter.Close();
+            streamWriter.Close();
+        }
     }
 
     public async Task WriteToJsonFileAsync(ICollection<CommitRecord> commits, string filePath, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(filePath);
 
-        await using StreamWriter streamWriter =  new(filePath);
-        
-        foreach (CommitRecord record in commits)
+        StreamWriter streamWriter = _fileSystem.File.CreateText(filePath);
+        await using (streamWriter.ConfigureAwait(false))
         {
-            string json = JsonSerializer.Serialize(record, CommitJsonContext.Default.CommitRecord);
+            foreach (CommitRecord record in commits)
+            {
+                string json = JsonSerializer.Serialize(record, CommitJsonContext.Default.CommitRecord);
 
-            await streamWriter.WriteLineAsync(json);
-        }
+                await streamWriter.WriteLineAsync(json).ConfigureAwait(false);
+            }
         
-        streamWriter.Close();
+            streamWriter.Close();
+        }
     }
 }

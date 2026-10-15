@@ -4,25 +4,25 @@ namespace DiffToJsonLib.Reasoning;
 
 public sealed class ModelsDevReasoningEffortMatrix : IReasoningEffortMatrix
 {
-    private static readonly HashSet<ReasoningEffort> AutoOnlySet = new()
-    {
+    private static readonly HashSet<ReasoningEffort> AutoOnlySet =
+    [
         ReasoningEffort.Auto
-    };
+    ];
 
-    private static readonly HashSet<ReasoningEffort> ToggleSet = new()
-    {
+    private static readonly HashSet<ReasoningEffort> ToggleSet =
+    [
         ReasoningEffort.Auto, ReasoningEffort.On, ReasoningEffort.Off
-    };
+    ];
 
-    // Intentional per D012/T005: BudgetTokens Type carries no values list, so the
+    // Intentional: BudgetTokens Type carries no values list, so the
     // catalog-driven set is {Auto,On,Off,Low}. BuildBudgetChatOptions retains
     // Medium/High fractions for forward compatibility, but validation currently
     // restricts pure BudgetTokens models to this set.
-    private static readonly HashSet<ReasoningEffort> BudgetSet = new()
-    {
+    private static readonly HashSet<ReasoningEffort> BudgetSet =
+    [
         ReasoningEffort.Auto, ReasoningEffort.On, ReasoningEffort.Off,
         ReasoningEffort.Low
-    };
+    ];
 
     private static readonly HashSet<string> AutoExceptions = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -66,7 +66,7 @@ public sealed class ModelsDevReasoningEffortMatrix : IReasoningEffortMatrix
 
     private async Task<CacheStatus> GetCacheStatusCoreAsync(CancellationToken cancellationToken)
     {
-        CapabilityCacheResult result = await _cache!.GetProviderInfosAsync(cancellationToken).ConfigureAwait(false);
+        CapabilityCacheResult result = await _cache.GetProviderInfosAsync(cancellationToken).ConfigureAwait(false);
         return result.Status;
     }
 
@@ -105,7 +105,7 @@ public sealed class ModelsDevReasoningEffortMatrix : IReasoningEffortMatrix
             return false;
 
         string normalizedForExceptionCheck = ModelIdNormalizer.ResolveModelId(model, availableVariants: null)?.Trim()
-            ?? model.Trim();
+                                             ?? model.Trim();
         if (AutoExceptions.Contains(normalizedForExceptionCheck))
             return false;
 
@@ -127,9 +127,9 @@ public sealed class ModelsDevReasoningEffortMatrix : IReasoningEffortMatrix
         if (string.IsNullOrWhiteSpace(model))
             return null;
 
-        AIProviderInfo[] providers = _providers ?? _cache!.GetProviderInfosAsync().GetAwaiter().GetResult().Providers ?? [];
+        AIProviderInfo[] providers = _providers ?? _cache.GetProviderInfosAsync().GetAwaiter().GetResult().Providers ?? [];
 
-        // Variant-aware per D005: translate size suffixes (qwen3.5:9b -> qwen3.5-9b)
+        // Variant-aware: translate size suffixes (qwen3.5:9b -> qwen3.5-9b)
         // only when the dash variant exists in the catalog; otherwise fall back
         // gracefully to the stripped id (never fabricated).
         HashSet<string> variants = new(StringComparer.OrdinalIgnoreCase);
@@ -146,8 +146,8 @@ public sealed class ModelsDevReasoningEffortMatrix : IReasoningEffortMatrix
         }
 
         string normalizedModel = ModelIdNormalizer.ResolveModelId(model, variants)
-            ?? ModelIdNormalizer.ResolveModelId(model, availableVariants: null)
-            ?? model.Trim();
+                                 ?? ModelIdNormalizer.ResolveModelId(model, availableVariants: null)
+                                 ?? model.Trim();
 
         if (string.IsNullOrWhiteSpace(provider))
             return FindModelAcrossProviders(providers, normalizedModel);
@@ -208,7 +208,7 @@ public sealed class ModelsDevReasoningEffortMatrix : IReasoningEffortMatrix
         if (values is null || values.Count == 0)
             return AutoOnlySet;
 
-        HashSet<ReasoningEffort> result = new() { ReasoningEffort.Auto };
+        HashSet<ReasoningEffort> result = [ReasoningEffort.Auto];
 
         foreach (string value in values)
         {

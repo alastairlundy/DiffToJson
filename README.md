@@ -266,13 +266,16 @@ When `--llm-assistant-output` is enabled, the assistant message of each Training
 
 ## Reasoning Effort
 
-`--reasoning-effort` accepts `auto` (default), `on`, `off`, `low`, `medium`, `high`, `xhigh`, `max`, but the accepted subset is validated per model. Unknown models only accept `auto`. Examples of known model families:
+`--reasoning-effort` accepts `auto` (default), `on`, `off`, `low`, `medium`, `high`, `xhigh`, `max`, but the accepted subset is validated per (provider, model) against capability data fetched from [models.dev](https://models.dev) and cached locally (24-hour TTL, stale-serve fallback). The supported values are derived from the model's reasoning option type, not from a hardcoded list:
 
-- Full graduated set (`auto` + `on`/`off` + `low`/`medium`/`high`/`xhigh`/`max`): `gpt-4o`, `gpt-4.1*`, `gpt-5*` (non-chat), `claude-sonnet-4.6`/`5`, `claude-opus-4.6+`, `claude-mythos-5`, `claude-fable-5`, `qwen3.5*`.
-- Budget-based, no `xhigh`/`max`: `claude-opus-4-5`, `claude-sonnet-4-5`, `claude-haiku-4-5`.
-- Graduated without `xhigh` (allows `max`): `deepseek-v4*`.
-- Binary thinking (`auto`/`on`/`off` only): `deepseek-v3.1`, `qwen3*`, `minimax-m*`.
-- Off only (`auto`/`off`): `deepseek-chat`, `deepseek-v3`.
+- **Effort** — the graduated values advertised by the catalog (typically `on`/`off` plus `low` through `max`), always including `auto`.
+- **Toggle** — `auto`, `on`, `off` only (binary thinking models).
+- **BudgetTokens** — `auto`, `on`, `off`, `low` only; higher levels are rejected because budget-based models express intensity as a token budget rather than an effort level.
+- **Unknown model, or no reasoning options** — `auto` only.
+
+Two deliberate exceptions never produce reasoning on `auto` even when the catalog says the model supports reasoning: the MiniMax M series (`minimax-m1`, `minimax-m2`, `minimax-m2.5`, `minimax-m3`) and `deepseek-chat`.
+
+When capability data is unavailable (offline, models.dev unreachable), the CLI prints a one-line warning on stderr and falls back to accepting `auto` only; runs are never blocked.
 
 If the value is invalid or unsupported for the given `--model-id`, the CLI exits with an error listing the supported values (see [Cross-Option Rules](#cross-option-rules)). `auto` leaves the default behavior (including default `MaxOutputTokens` of 16,000 when the model produces reasoning on `auto`, else 8,000).
 

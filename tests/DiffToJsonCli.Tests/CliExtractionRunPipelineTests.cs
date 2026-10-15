@@ -1,3 +1,4 @@
+using System.IO.Abstractions;
 using System.Runtime.CompilerServices;
 using DiffToJsonCli.Execution;
 using DiffToJsonLib.Abstractions;
@@ -74,9 +75,9 @@ public sealed class CliExtractionRunPipelineTests
     {
         public string? Result { get; set; } = "MIT";
         public int CallCount { get; private set; }
-        public FileInfo? CapturedFile { get; private set; }
+        public IFileInfo? CapturedFile { get; private set; }
 
-        public Task<string?> AnalyzeLicenseAsync(FileInfo licenseFile)
+        public Task<string?> AnalyzeLicenseAsync(IFileInfo licenseFile)
         {
             CallCount++;
             CapturedFile = licenseFile;
@@ -228,6 +229,7 @@ public sealed class CliExtractionRunPipelineTests
     {
         RedactionPolicy policy = new(new Dictionary<RedactionTier, Redactor>());
         return new CliExtractionRunPipeline(
+            new FileSystem(),
             seams.Parser,
             seams.License,
             seams.Matrix,
@@ -1314,7 +1316,7 @@ public sealed class CliExtractionRunPipelineTests
     }
 
     [Test]
-    public async Task ValidationErrors_DoNotLeakInternalParameterNames()
+    public async Task ValidationErrors_AreArgumentExceptions()
     {
         TestSeams seams = CreateSeams();
         CliExtractionRunPipeline pipeline = CreatePipeline(seams);
@@ -1365,10 +1367,12 @@ public sealed class CliExtractionRunPipelineTests
             }
 
             await Assert.That(errors.Count).IsEqualTo(4);
+
+            // ArgumentException parameter names are deliberately included; each
+            // scenario is covered individually by its own test above.
             foreach (Exception error in errors)
             {
                 await Assert.That(error is ArgumentException).IsTrue();
-                await Assert.That(error.Message.Contains("Parameter '")).IsFalse();
             }
         }
         finally

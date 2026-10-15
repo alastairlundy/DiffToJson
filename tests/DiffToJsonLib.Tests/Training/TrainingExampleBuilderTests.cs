@@ -1,4 +1,3 @@
-using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using DiffToJsonLib.Models;
 using DiffToJsonLib.Prompts;
@@ -56,7 +55,7 @@ public sealed class TrainingExampleBuilderTests
 
     private static RedactionPolicy CreateRedactionPolicy()
     {
-        var redactor = new TestRedactor("secret[a-z0-9=@.]*", "[REDACTED]");
+        TestRedactor redactor = new TestRedactor("secret[a-z0-9=@.]*", "[REDACTED]");
         return new RedactionPolicy(new Dictionary<RedactionTier, Redactor>
         {
             [RedactionTier.All] = redactor
@@ -66,18 +65,18 @@ public sealed class TrainingExampleBuilderTests
     [Test]
     public async Task BuildAsync_WithoutLlmOutput_UsesCommitMessageAsAssistantContent()
     {
-        var redactor = CreateRedactionPolicy();
-        var generator = new FakeAssistantMessageGenerator(
+        RedactionPolicy redactor = CreateRedactionPolicy();
+        FakeAssistantMessageGenerator generator = new FakeAssistantMessageGenerator(
             new AssistantMessageResult.AssistantMessageDisabled("ignored"));
-        var builder = new TrainingExampleBuilder(redactor, generator);
-        var options = new TrainingExampleOptions(
+        TrainingExampleBuilder builder = new TrainingExampleBuilder(redactor, generator);
+        TrainingExampleOptions options = new TrainingExampleOptions(
             SampleTemplate, null, false, RedactionTier.All, new ChatOptions());
 
-        var source = AsyncEnumerable(new[] { SampleCommit });
-        var records = await builder.BuildAsync(source, options, CancellationToken.None).ToListAsync(cancellationToken: CancellationToken.None);
+        IAsyncEnumerable<CommitRecord> source = AsyncEnumerable([SampleCommit]);
+        List<CommitTrainingRecord> records = await builder.BuildAsync(source, options, CancellationToken.None).ToListAsync(cancellationToken: CancellationToken.None);
 
         await Assert.That(records).HasSingleItem();
-        var record = records[0];
+        CommitTrainingRecord record = records[0];
         await Assert.That(record.Messages.Length).IsEqualTo(3);
         await Assert.That(record.Messages[0].Role).IsEqualTo("system");
         await Assert.That(record.Messages[1].Role).IsEqualTo("user");
@@ -89,19 +88,19 @@ public sealed class TrainingExampleBuilderTests
     [Test]
     public async Task BuildAsync_WithLlmOutputAndGeneratedResult_UsesGeneratedContent()
     {
-        var redactor = CreateRedactionPolicy();
-        var generator = new FakeAssistantMessageGenerator(
+        RedactionPolicy redactor = CreateRedactionPolicy();
+        FakeAssistantMessageGenerator generator = new FakeAssistantMessageGenerator(
             new AssistantMessageResult.AssistantMessageGenerated(
                 "generated response", "original response"));
-        var builder = new TrainingExampleBuilder(redactor, generator);
-        var options = new TrainingExampleOptions(
+        TrainingExampleBuilder builder = new TrainingExampleBuilder(redactor, generator);
+        TrainingExampleOptions options = new TrainingExampleOptions(
             SampleTemplate, null, true, RedactionTier.All, new ChatOptions());
 
-        var source = AsyncEnumerable(new[] { SampleCommit });
-        var records = await builder.BuildAsync(source, options, CancellationToken.None).ToListAsync(cancellationToken: CancellationToken.None);
+        IAsyncEnumerable<CommitRecord> source = AsyncEnumerable([SampleCommit]);
+        List<CommitTrainingRecord> records = await builder.BuildAsync(source, options, CancellationToken.None).ToListAsync(cancellationToken: CancellationToken.None);
 
         await Assert.That(records).HasSingleItem();
-        var record = records[0];
+        CommitTrainingRecord record = records[0];
         await Assert.That(record.Messages[2].Content).IsEqualTo("generated response");
         await Assert.That(record.OriginalAssistantMessage).IsEqualTo("original response");
     }
@@ -109,18 +108,18 @@ public sealed class TrainingExampleBuilderTests
     [Test]
     public async Task BuildAsync_WithLlmOutputAndDisabledResult_UsesFallbackAndNoOriginal()
     {
-        var redactor = CreateRedactionPolicy();
-        var generator = new FakeAssistantMessageGenerator(
+        RedactionPolicy redactor = CreateRedactionPolicy();
+        FakeAssistantMessageGenerator generator = new FakeAssistantMessageGenerator(
             new AssistantMessageResult.AssistantMessageDisabled("fallback content"));
-        var builder = new TrainingExampleBuilder(redactor, generator);
-        var options = new TrainingExampleOptions(
+        TrainingExampleBuilder builder = new TrainingExampleBuilder(redactor, generator);
+        TrainingExampleOptions options = new TrainingExampleOptions(
             SampleTemplate, null, true, RedactionTier.All, new ChatOptions());
 
-        var source = AsyncEnumerable(new[] { SampleCommit });
-        var records = await builder.BuildAsync(source, options, CancellationToken.None).ToListAsync(cancellationToken: CancellationToken.None);
+        IAsyncEnumerable<CommitRecord> source = AsyncEnumerable([SampleCommit]);
+        List<CommitTrainingRecord> records = await builder.BuildAsync(source, options, CancellationToken.None).ToListAsync(cancellationToken: CancellationToken.None);
 
         await Assert.That(records).HasSingleItem();
-        var record = records[0];
+        CommitTrainingRecord record = records[0];
         await Assert.That(record.Messages[2].Content).IsEqualTo("fallback content");
         await Assert.That(record.OriginalAssistantMessage).IsNull();
     }
@@ -128,19 +127,19 @@ public sealed class TrainingExampleBuilderTests
     [Test]
     public async Task BuildAsync_WithLlmOutputAndFailedResultWithFallback_UsesFallbackAndSetsOriginal()
     {
-        var redactor = CreateRedactionPolicy();
-        var generator = new FakeAssistantMessageGenerator(
+        RedactionPolicy redactor = CreateRedactionPolicy();
+        FakeAssistantMessageGenerator generator = new FakeAssistantMessageGenerator(
             new AssistantMessageResult.AssistantMessageAttemptedAndFailed(
                 "fallback after failure", "original attempted"));
-        var builder = new TrainingExampleBuilder(redactor, generator);
-        var options = new TrainingExampleOptions(
+        TrainingExampleBuilder builder = new TrainingExampleBuilder(redactor, generator);
+        TrainingExampleOptions options = new TrainingExampleOptions(
             SampleTemplate, null, true, RedactionTier.All, new ChatOptions());
 
-        var source = AsyncEnumerable(new[] { SampleCommit });
-        var records = await builder.BuildAsync(source, options, CancellationToken.None).ToListAsync(cancellationToken: CancellationToken.None);
+        IAsyncEnumerable<CommitRecord> source = AsyncEnumerable([SampleCommit]);
+        List<CommitTrainingRecord> records = await builder.BuildAsync(source, options, CancellationToken.None).ToListAsync(cancellationToken: CancellationToken.None);
 
         await Assert.That(records).HasSingleItem();
-        var record = records[0];
+        CommitTrainingRecord record = records[0];
         await Assert.That(record.Messages[2].Content).IsEqualTo("fallback after failure");
         await Assert.That(record.OriginalAssistantMessage).IsEqualTo("original attempted");
     }
@@ -148,19 +147,19 @@ public sealed class TrainingExampleBuilderTests
     [Test]
     public async Task BuildAsync_WithLlmOutputAndFailedResultWithoutFallback_UsesOriginalAsFallback()
     {
-        var redactor = CreateRedactionPolicy();
-        var generator = new FakeAssistantMessageGenerator(
+        RedactionPolicy redactor = CreateRedactionPolicy();
+        FakeAssistantMessageGenerator generator = new FakeAssistantMessageGenerator(
             new AssistantMessageResult.AssistantMessageAttemptedAndFailed(
                 null, "original attempted"));
-        var builder = new TrainingExampleBuilder(redactor, generator);
-        var options = new TrainingExampleOptions(
+        TrainingExampleBuilder builder = new TrainingExampleBuilder(redactor, generator);
+        TrainingExampleOptions options = new TrainingExampleOptions(
             SampleTemplate, null, true, RedactionTier.All, new ChatOptions());
 
-        var source = AsyncEnumerable(new[] { SampleCommit });
-        var records = await builder.BuildAsync(source, options, CancellationToken.None).ToListAsync(cancellationToken: CancellationToken.None);
+        IAsyncEnumerable<CommitRecord> source = AsyncEnumerable([SampleCommit]);
+        List<CommitTrainingRecord> records = await builder.BuildAsync(source, options, CancellationToken.None).ToListAsync(cancellationToken: CancellationToken.None);
 
         await Assert.That(records).HasSingleItem();
-        var record = records[0];
+        CommitTrainingRecord record = records[0];
         await Assert.That(record.Messages[2].Content).IsEqualTo("original attempted");
         await Assert.That(record.OriginalAssistantMessage).IsEqualTo("original attempted");
     }
@@ -168,23 +167,23 @@ public sealed class TrainingExampleBuilderTests
     [Test]
     public async Task BuildAsync_WithLlmOverridePrompt_UsesOverrideAsUserPrompt()
     {
-        var redactor = CreateRedactionPolicy();
+        RedactionPolicy redactor = CreateRedactionPolicy();
         string? capturedUserPrompt = null;
-        var generator = new AsyncLocalCapturingGenerator(p =>
+        AsyncLocalCapturingGenerator generator = new AsyncLocalCapturingGenerator(p =>
         {
             capturedUserPrompt = p;
             return new AssistantMessageResult.AssistantMessageGenerated("response", "original");
         });
-        var builder = new TrainingExampleBuilder(redactor, generator);
-        var options = new TrainingExampleOptions(
+        TrainingExampleBuilder builder = new TrainingExampleBuilder(redactor, generator);
+        TrainingExampleOptions options = new TrainingExampleOptions(
             SampleTemplate,
             "Custom prompt: {commitMessage} in {repoName}",
             true,
             RedactionTier.All,
             new ChatOptions());
 
-        var source = AsyncEnumerable(new[] { SampleCommit });
-        var records = await builder.BuildAsync(source, options, CancellationToken.None).ToListAsync(cancellationToken: CancellationToken.None);
+        IAsyncEnumerable<CommitRecord> source = AsyncEnumerable([SampleCommit]);
+        List<CommitTrainingRecord> records = await builder.BuildAsync(source, options, CancellationToken.None).ToListAsync(cancellationToken: CancellationToken.None);
 
         await Assert.That(records).HasSingleItem();
         await Assert.That(capturedUserPrompt).IsEqualTo("Custom prompt: commit: fix [REDACTED] in my/repo");
@@ -193,19 +192,19 @@ public sealed class TrainingExampleBuilderTests
     [Test]
     public async Task BuildAsync_AppliesRedactionBeforeSubstitution()
     {
-        var redactor = CreateRedactionPolicy();
-        var generator = new FakeAssistantMessageGenerator(
+        RedactionPolicy redactor = CreateRedactionPolicy();
+        FakeAssistantMessageGenerator generator = new FakeAssistantMessageGenerator(
             new AssistantMessageResult.AssistantMessageGenerated("response", "original"));
-        var builder = new TrainingExampleBuilder(redactor, generator);
-        var options = new TrainingExampleOptions(
+        TrainingExampleBuilder builder = new TrainingExampleBuilder(redactor, generator);
+        TrainingExampleOptions options = new TrainingExampleOptions(
             new PromptTemplate("System", "Diff: {diff}"),
             null,
             true,
             RedactionTier.All,
             new ChatOptions());
 
-        var source = AsyncEnumerable(new[] { SampleCommit });
-        var records = await builder.BuildAsync(source, options, CancellationToken.None).ToListAsync(cancellationToken: CancellationToken.None);
+        IAsyncEnumerable<CommitRecord> source = AsyncEnumerable([SampleCommit]);
+        List<CommitTrainingRecord> records = await builder.BuildAsync(source, options, CancellationToken.None).ToListAsync(cancellationToken: CancellationToken.None);
 
         await Assert.That(records).HasSingleItem();
         await Assert.That(records[0].Messages[1].Content).IsEqualTo("Diff: diff content [REDACTED]");
@@ -214,17 +213,17 @@ public sealed class TrainingExampleBuilderTests
     [Test]
     public async Task BuildAsync_SetsProvenanceAndLegalFromRedactedCommit()
     {
-        var redactor = CreateRedactionPolicy();
-        var generator = new FakeAssistantMessageGenerator(
+        RedactionPolicy redactor = CreateRedactionPolicy();
+        FakeAssistantMessageGenerator generator = new FakeAssistantMessageGenerator(
             new AssistantMessageResult.AssistantMessageGenerated("response", "original"));
-        var builder = new TrainingExampleBuilder(redactor, generator);
-        var options = new TrainingExampleOptions(
+        TrainingExampleBuilder builder = new TrainingExampleBuilder(redactor, generator);
+        TrainingExampleOptions options = new TrainingExampleOptions(
             SampleTemplate, null, false, RedactionTier.None, new ChatOptions());
 
-        var source = AsyncEnumerable(new[] { SampleCommit });
-        var records = await builder.BuildAsync(source, options, CancellationToken.None).ToListAsync(cancellationToken: CancellationToken.None);
+        IAsyncEnumerable<CommitRecord> source = AsyncEnumerable([SampleCommit]);
+        List<CommitTrainingRecord> records = await builder.BuildAsync(source, options, CancellationToken.None).ToListAsync(cancellationToken: CancellationToken.None);
 
-        var record = records[0];
+        CommitTrainingRecord record = records[0];
         await Assert.That(record.Provenance.RepoName).IsEqualTo("my/repo");
         await Assert.That(record.Provenance.RepoUrl).IsEqualTo("https://github.com/my/repo");
         await Assert.That(record.Legal.License).IsEqualTo("MIT");
@@ -233,28 +232,28 @@ public sealed class TrainingExampleBuilderTests
     [Test]
     public async Task BuildAsync_RedactsMessageWithSpecifiedTier()
     {
-        var testRedactor = new TestRedactor("secret[a-z0-9=@.]*", "[REDACTED]");
-        var redactor = new RedactionPolicy(new Dictionary<RedactionTier, Redactor>
+        TestRedactor testRedactor = new TestRedactor("secret[a-z0-9=@.]*", "[REDACTED]");
+        RedactionPolicy redactor = new RedactionPolicy(new Dictionary<RedactionTier, Redactor>
         {
             [RedactionTier.Message] = testRedactor
         });
-        var generator = new FakeAssistantMessageGenerator(
+        FakeAssistantMessageGenerator generator = new FakeAssistantMessageGenerator(
             new AssistantMessageResult.AssistantMessageGenerated("response", "original"));
-        var builder = new TrainingExampleBuilder(redactor, generator);
-        var options = new TrainingExampleOptions(
+        TrainingExampleBuilder builder = new TrainingExampleBuilder(redactor, generator);
+        TrainingExampleOptions options = new TrainingExampleOptions(
             new PromptTemplate("System", "Message: {commitMessage}"),
             null,
             true,
             RedactionTier.Message,
             new ChatOptions());
 
-        var commit = new CommitRecord(
+        CommitRecord commit = new CommitRecord(
             "diff with secret=9999",
             "commit with secret=1234",
             "repo", "MIT", "url");
 
-        var source = AsyncEnumerable(new[] { commit });
-        var records = await builder.BuildAsync(source, options, CancellationToken.None).ToListAsync(cancellationToken: CancellationToken.None);
+        IAsyncEnumerable<CommitRecord> source = AsyncEnumerable([commit]);
+        List<CommitTrainingRecord> records = await builder.BuildAsync(source, options, CancellationToken.None).ToListAsync(cancellationToken: CancellationToken.None);
 
         await Assert.That(records[0].Messages[1].Content).IsEqualTo("Message: commit with [REDACTED]");
     }
@@ -262,19 +261,19 @@ public sealed class TrainingExampleBuilderTests
     [Test]
     public async Task BuildAsync_WithNoRedactionTier_PassesOriginalContentToSubstitution()
     {
-        var redactor = CreateRedactionPolicy();
-        var generator = new FakeAssistantMessageGenerator(
+        RedactionPolicy redactor = CreateRedactionPolicy();
+        FakeAssistantMessageGenerator generator = new FakeAssistantMessageGenerator(
             new AssistantMessageResult.AssistantMessageGenerated("response", "original"));
-        var builder = new TrainingExampleBuilder(redactor, generator);
-        var options = new TrainingExampleOptions(
+        TrainingExampleBuilder builder = new TrainingExampleBuilder(redactor, generator);
+        TrainingExampleOptions options = new TrainingExampleOptions(
             new PromptTemplate("System", "Diff: {diff}"),
             null,
             true,
             RedactionTier.None,
             new ChatOptions());
 
-        var source = AsyncEnumerable(new[] { SampleCommit });
-        var records = await builder.BuildAsync(source, options, CancellationToken.None).ToListAsync(cancellationToken: CancellationToken.None);
+        IAsyncEnumerable<CommitRecord> source = AsyncEnumerable([SampleCommit]);
+        List<CommitTrainingRecord> records = await builder.BuildAsync(source, options, CancellationToken.None).ToListAsync(cancellationToken: CancellationToken.None);
 
         await Assert.That(records[0].Messages[1].Content).IsEqualTo("Diff: diff content secret=1234");
     }
@@ -282,23 +281,23 @@ public sealed class TrainingExampleBuilderTests
     [Test]
     public async Task BuildAsync_ProcessesMultipleCommits()
     {
-        var redactor = CreateRedactionPolicy();
-        var generator = new FakeAssistantMessageGenerator(
+        RedactionPolicy redactor = CreateRedactionPolicy();
+        FakeAssistantMessageGenerator generator = new FakeAssistantMessageGenerator(
             new AssistantMessageResult.AssistantMessageGenerated("response", "original"));
-        var builder = new TrainingExampleBuilder(redactor, generator);
-        var options = new TrainingExampleOptions(
+        TrainingExampleBuilder builder = new TrainingExampleBuilder(redactor, generator);
+        TrainingExampleOptions options = new TrainingExampleOptions(
             SampleTemplate, null, true, RedactionTier.None, new ChatOptions());
 
-        var commit2 = SampleCommit with { CommitMessage = "second commit" };
-        var source = AsyncEnumerable(new[] { SampleCommit, commit2 });
-        var records = await builder.BuildAsync(source, options, CancellationToken.None).ToListAsync(cancellationToken: CancellationToken.None);
+        CommitRecord commit2 = SampleCommit with { CommitMessage = "second commit" };
+        IAsyncEnumerable<CommitRecord> source = AsyncEnumerable([SampleCommit, commit2]);
+        List<CommitTrainingRecord> records = await builder.BuildAsync(source, options, CancellationToken.None).ToListAsync(cancellationToken: CancellationToken.None);
 
         await Assert.That(records.Count).IsEqualTo(2);
     }
 
     private static async IAsyncEnumerable<T> AsyncEnumerable<T>(IEnumerable<T> items)
     {
-        foreach (var item in items)
+        foreach (T item in items)
         {
             yield return item;
             await Task.CompletedTask;

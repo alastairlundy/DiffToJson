@@ -14,9 +14,11 @@
    limitations under the License.
  */
 
+using System.IO.Abstractions;
+
 namespace DiffToJsonLib.Abstractions;
 
 public interface ILicenseAnalyzer
 {
-    Task<string?> AnalyzeLicenseAsync(FileInfo licenseFile);
+    Task<string?> AnalyzeLicenseAsync(IFileInfo licenseFile);
 }

@@ -21,10 +21,10 @@ public static class PromptSubstitutor
     public static string Substitute(string template, string diff, string commitMessage, string repoName, string license, string repoUrl)
     {
         return template
-            .Replace("{diff}", diff)
-            .Replace("{commitMessage}", commitMessage)
-            .Replace("{repoName}", repoName)
-            .Replace("{license}", license)
-            .Replace("{repoUrl}", repoUrl);
+            .Replace("{diff}", diff, StringComparison.OrdinalIgnoreCase)
+            .Replace("{commitMessage}", commitMessage, StringComparison.OrdinalIgnoreCase)
+            .Replace("{repoName}", repoName, StringComparison.OrdinalIgnoreCase)
+            .Replace("{license}", license, StringComparison.OrdinalIgnoreCase)
+            .Replace("{repoUrl}", repoUrl, StringComparison.OrdinalIgnoreCase);
     }
 }

@@ -7,7 +7,7 @@ public class ModelsDevProviderMapTests
     [Test]
     public async Task OpenAi_MapsToOpenAi()
     {
-        var found = ModelsDevProviderMap.TryGetProviderId("openai", out var providerId);
+        bool found = ModelsDevProviderMap.TryGetProviderId("openai", out string providerId);
         await Assert.That(found).IsTrue();
         await Assert.That(providerId).IsEqualTo("openai");
     }
@@ -15,7 +15,7 @@ public class ModelsDevProviderMapTests
     [Test]
     public async Task Anthropic_MapsToAnthropic()
     {
-        var found = ModelsDevProviderMap.TryGetProviderId("anthropic", out var providerId);
+        bool found = ModelsDevProviderMap.TryGetProviderId("anthropic", out string providerId);
         await Assert.That(found).IsTrue();
         await Assert.That(providerId).IsEqualTo("anthropic");
     }
@@ -23,7 +23,7 @@ public class ModelsDevProviderMapTests
     [Test]
     public async Task OpenRouter_MapsToOpenRouter()
     {
-        var found = ModelsDevProviderMap.TryGetProviderId("openrouter", out var providerId);
+        bool found = ModelsDevProviderMap.TryGetProviderId("openrouter", out string providerId);
         await Assert.That(found).IsTrue();
         await Assert.That(providerId).IsEqualTo("openrouter");
     }
@@ -31,7 +31,7 @@ public class ModelsDevProviderMapTests
     [Test]
     public async Task Ollama_MapsToOllamaCloud()
     {
-        var found = ModelsDevProviderMap.TryGetProviderId("ollama", out var providerId);
+        bool found = ModelsDevProviderMap.TryGetProviderId("ollama", out string providerId);
         await Assert.That(found).IsTrue();
         await Assert.That(providerId).IsEqualTo("ollama-cloud");
     }
@@ -39,7 +39,7 @@ public class ModelsDevProviderMapTests
     [Test]
     public async Task OllamaCloud_MapsToOllamaCloud()
     {
-        var found = ModelsDevProviderMap.TryGetProviderId("ollama-cloud", out var providerId);
+        bool found = ModelsDevProviderMap.TryGetProviderId("ollama-cloud", out string providerId);
         await Assert.That(found).IsTrue();
         await Assert.That(providerId).IsEqualTo("ollama-cloud");
     }
@@ -47,7 +47,7 @@ public class ModelsDevProviderMapTests
     [Test]
     public async Task UnknownProvider_ReturnsFalse()
     {
-        var found = ModelsDevProviderMap.TryGetProviderId("unknown-provider", out var providerId);
+        bool found = ModelsDevProviderMap.TryGetProviderId("unknown-provider", out string providerId);
         await Assert.That(found).IsFalse();
         await Assert.That(providerId).IsNull();
     }
@@ -55,22 +55,22 @@ public class ModelsDevProviderMapTests
     [Test]
     public async Task NullProvider_ReturnsFalse()
     {
-        var found = ModelsDevProviderMap.TryGetProviderId(null!, out var providerId);
+        bool found = ModelsDevProviderMap.TryGetProviderId(null!, out string _);
         await Assert.That(found).IsFalse();
     }
 
     [Test]
     public async Task EmptyProvider_ReturnsFalse()
     {
-        var found = ModelsDevProviderMap.TryGetProviderId(string.Empty, out var providerId);
+        bool found = ModelsDevProviderMap.TryGetProviderId(string.Empty, out string _);
         await Assert.That(found).IsFalse();
     }
 
     [Test]
     public async Task CaseInsensitive_Lookup()
     {
-        var foundUpper = ModelsDevProviderMap.TryGetProviderId("OPENAI", out var idUpper);
-        var foundLower = ModelsDevProviderMap.TryGetProviderId("openai", out var idLower);
+        bool foundUpper = ModelsDevProviderMap.TryGetProviderId("OPENAI", out string idUpper);
+        bool foundLower = ModelsDevProviderMap.TryGetProviderId("openai", out string idLower);
         await Assert.That(foundUpper).IsEqualTo(foundLower);
         await Assert.That(idUpper).IsEqualTo(idLower);
     }

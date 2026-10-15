@@ -44,13 +44,12 @@ public class ModelsDevReasoningEffortMatrixTests
     [Test]
     public async Task EffortType_MapsValuesToReasoningEffort()
     {
-        AIModelInfo model = CreateModel("gpt-4o", true, new[]
-        {
+        AIModelInfo model = CreateModel("gpt-4o", true, [
             CreateReasoningOption(AIModelReasoningOptionType.Effort,
                 ["low", "medium", "high", "xhigh", "max"])
-        });
+        ]);
         AIProviderInfo provider = CreateProvider("openai", [model]);
-        var matrix = CreateMatrix([provider]);
+        ModelsDevReasoningEffortMatrix matrix = CreateMatrix([provider]);
 
         IReadOnlySet<ReasoningEffort> result = matrix.GetSupportedReasoningValues("gpt-4o", "openai");
 
@@ -66,13 +65,12 @@ public class ModelsDevReasoningEffortMatrixTests
     [Test]
     public async Task EffortType_WithLimitedValues()
     {
-        AIModelInfo model = CreateModel("claude-sonnet-4-5", true, new[]
-        {
+        AIModelInfo model = CreateModel("claude-sonnet-4-5", true, [
             CreateReasoningOption(AIModelReasoningOptionType.Effort,
                 ["low", "medium", "high"])
-        });
+        ]);
         AIProviderInfo provider = CreateProvider("anthropic", [model]);
-        var matrix = CreateMatrix([provider]);
+        ModelsDevReasoningEffortMatrix matrix = CreateMatrix([provider]);
 
         IReadOnlySet<ReasoningEffort> result = matrix.GetSupportedReasoningValues("claude-sonnet-4-5", "anthropic");
 
@@ -90,12 +88,11 @@ public class ModelsDevReasoningEffortMatrixTests
     [Test]
     public async Task ToggleType_YieldsOnOffSet()
     {
-        AIModelInfo model = CreateModel("claude-sonnet-5", true, new[]
-        {
+        AIModelInfo model = CreateModel("claude-sonnet-5", true, [
             CreateReasoningOption(AIModelReasoningOptionType.Toggle)
-        });
+        ]);
         AIProviderInfo provider = CreateProvider("anthropic", [model]);
-        var matrix = CreateMatrix([provider]);
+        ModelsDevReasoningEffortMatrix matrix = CreateMatrix([provider]);
 
         IReadOnlySet<ReasoningEffort> result = matrix.GetSupportedReasoningValues("claude-sonnet-5", "anthropic");
 
@@ -110,12 +107,11 @@ public class ModelsDevReasoningEffortMatrixTests
     [Test]
     public async Task BudgetTokensType_YieldsBudgetSet()
     {
-        AIModelInfo model = CreateModel("claude-haiku-4-5", true, new[]
-        {
+        AIModelInfo model = CreateModel("claude-haiku-4-5", true, [
             CreateReasoningOption(AIModelReasoningOptionType.BudgetTokens)
-        });
+        ]);
         AIProviderInfo provider = CreateProvider("anthropic", [model]);
-        var matrix = CreateMatrix([provider]);
+        ModelsDevReasoningEffortMatrix matrix = CreateMatrix([provider]);
 
         IReadOnlySet<ReasoningEffort> result = matrix.GetSupportedReasoningValues("claude-haiku-4-5", "anthropic");
 
@@ -132,7 +128,7 @@ public class ModelsDevReasoningEffortMatrixTests
     public async Task MissingModel_ReturnsAutoOnly()
     {
         AIProviderInfo provider = CreateProvider("openai", []);
-        var matrix = CreateMatrix([provider]);
+        ModelsDevReasoningEffortMatrix matrix = CreateMatrix([provider]);
 
         IReadOnlySet<ReasoningEffort> result = matrix.GetSupportedReasoningValues("nonexistent-model", "openai");
 
@@ -145,7 +141,7 @@ public class ModelsDevReasoningEffortMatrixTests
     {
         AIModelInfo model = CreateModel("some-model", false, null);
         AIProviderInfo provider = CreateProvider("openai", [model]);
-        var matrix = CreateMatrix([provider]);
+        ModelsDevReasoningEffortMatrix matrix = CreateMatrix([provider]);
 
         IReadOnlySet<ReasoningEffort> result = matrix.GetSupportedReasoningValues("some-model", "openai");
 
@@ -158,12 +154,11 @@ public class ModelsDevReasoningEffortMatrixTests
     [Test]
     public async Task SupportsReasoningTrue_ProducesReasoningOnAuto()
     {
-        AIModelInfo model = CreateModel("gpt-4o", true, new[]
-        {
+        AIModelInfo model = CreateModel("gpt-4o", true, [
             CreateReasoningOption(AIModelReasoningOptionType.Effort, ["low", "high"])
-        });
+        ]);
         AIProviderInfo provider = CreateProvider("openai", [model]);
-        var matrix = CreateMatrix([provider]);
+        ModelsDevReasoningEffortMatrix matrix = CreateMatrix([provider]);
 
         await Assert.That(matrix.ProducesReasoningOnAuto("gpt-4o", "openai")).IsTrue();
     }
@@ -171,12 +166,11 @@ public class ModelsDevReasoningEffortMatrixTests
     [Test]
     public async Task SupportsReasoningFalse_DoesNotProduceReasoningOnAuto()
     {
-        AIModelInfo model = CreateModel("deepseek-chat", false, new[]
-        {
+        AIModelInfo model = CreateModel("deepseek-chat", false, [
             CreateReasoningOption(AIModelReasoningOptionType.Toggle)
-        });
+        ]);
         AIProviderInfo provider = CreateProvider("deepseek", [model]);
-        var matrix = CreateMatrix([provider]);
+        ModelsDevReasoningEffortMatrix matrix = CreateMatrix([provider]);
 
         await Assert.That(matrix.ProducesReasoningOnAuto("deepseek-chat", "deepseek")).IsFalse();
     }
@@ -186,12 +180,11 @@ public class ModelsDevReasoningEffortMatrixTests
     [Test]
     public async Task MiniMaxM1_ExceptionReturnsFalse()
     {
-        AIModelInfo model = CreateModel("minimax-m1", true, new[]
-        {
+        AIModelInfo model = CreateModel("minimax-m1", true, [
             CreateReasoningOption(AIModelReasoningOptionType.Toggle)
-        });
+        ]);
         AIProviderInfo provider = CreateProvider("minimax", [model]);
-        var matrix = CreateMatrix([provider]);
+        ModelsDevReasoningEffortMatrix matrix = CreateMatrix([provider]);
 
         await Assert.That(matrix.ProducesReasoningOnAuto("minimax-m1", "minimax")).IsFalse();
     }
@@ -199,12 +192,11 @@ public class ModelsDevReasoningEffortMatrixTests
     [Test]
     public async Task MiniMaxM3_ExceptionReturnsFalse()
     {
-        AIModelInfo model = CreateModel("minimax-m3", true, new[]
-        {
+        AIModelInfo model = CreateModel("minimax-m3", true, [
             CreateReasoningOption(AIModelReasoningOptionType.Toggle)
-        });
+        ]);
         AIProviderInfo provider = CreateProvider("minimax", [model]);
-        var matrix = CreateMatrix([provider]);
+        ModelsDevReasoningEffortMatrix matrix = CreateMatrix([provider]);
 
         await Assert.That(matrix.ProducesReasoningOnAuto("minimax-m3", "minimax")).IsFalse();
     }
@@ -212,12 +204,11 @@ public class ModelsDevReasoningEffortMatrixTests
     [Test]
     public async Task DeepseekChat_ExceptionReturnsFalse()
     {
-        AIModelInfo model = CreateModel("deepseek-chat", true, new[]
-        {
+        AIModelInfo model = CreateModel("deepseek-chat", true, [
             CreateReasoningOption(AIModelReasoningOptionType.Toggle)
-        });
+        ]);
         AIProviderInfo provider = CreateProvider("deepseek", [model]);
-        var matrix = CreateMatrix([provider]);
+        ModelsDevReasoningEffortMatrix matrix = CreateMatrix([provider]);
 
         await Assert.That(matrix.ProducesReasoningOnAuto("deepseek-chat", "deepseek")).IsFalse();
     }
@@ -227,12 +218,11 @@ public class ModelsDevReasoningEffortMatrixTests
     [Test]
     public async Task GetReasoningType_ReturnsEffortForEffortModel()
     {
-        AIModelInfo model = CreateModel("gpt-4o", true, new[]
-        {
+        AIModelInfo model = CreateModel("gpt-4o", true, [
             CreateReasoningOption(AIModelReasoningOptionType.Effort, ["low", "high"])
-        });
+        ]);
         AIProviderInfo provider = CreateProvider("openai", [model]);
-        var matrix = CreateMatrix([provider]);
+        ModelsDevReasoningEffortMatrix matrix = CreateMatrix([provider]);
 
         AIModelReasoningOptionType? type = matrix.GetReasoningType("gpt-4o", "openai");
 
@@ -243,7 +233,7 @@ public class ModelsDevReasoningEffortMatrixTests
     public async Task GetReasoningType_ReturnsNullForMissingModel()
     {
         AIProviderInfo provider = CreateProvider("openai", []);
-        var matrix = CreateMatrix([provider]);
+        ModelsDevReasoningEffortMatrix matrix = CreateMatrix([provider]);
 
         AIModelReasoningOptionType? type = matrix.GetReasoningType("nonexistent", "openai");
 
@@ -255,12 +245,11 @@ public class ModelsDevReasoningEffortMatrixTests
     [Test]
     public async Task ProviderMapping_OllamaResolvesToOllamaCloud()
     {
-        AIModelInfo model = CreateModel("qwen3", true, new[]
-        {
+        AIModelInfo model = CreateModel("qwen3", true, [
             CreateReasoningOption(AIModelReasoningOptionType.Toggle)
-        });
+        ]);
         AIProviderInfo provider = CreateProvider("ollama-cloud", [model]);
-        var matrix = CreateMatrix([provider]);
+        ModelsDevReasoningEffortMatrix matrix = CreateMatrix([provider]);
 
         IReadOnlySet<ReasoningEffort> result = matrix.GetSupportedReasoningValues("qwen3", "ollama");
 
@@ -275,7 +264,7 @@ public class ModelsDevReasoningEffortMatrixTests
     public async Task UnknownProvider_FallsBackToAutoOnly()
     {
         AIProviderInfo provider = CreateProvider("openai", []);
-        var matrix = CreateMatrix([provider]);
+        ModelsDevReasoningEffortMatrix matrix = CreateMatrix([provider]);
 
         IReadOnlySet<ReasoningEffort> result = matrix.GetSupportedReasoningValues("gpt-4o", "unknown-provider");
 
@@ -288,7 +277,7 @@ public class ModelsDevReasoningEffortMatrixTests
     [Test]
     public async Task EmptyCache_ReturnsAutoOnly()
     {
-        var matrix = CreateMatrix([]);
+        ModelsDevReasoningEffortMatrix matrix = CreateMatrix([]);
 
         IReadOnlySet<ReasoningEffort> result = matrix.GetSupportedReasoningValues("gpt-4o", "openai");
 

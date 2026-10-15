@@ -21,5 +21,5 @@ public enum RedactionTier
     None,
     Message,
     Diff,
-    All
+    All,
 }

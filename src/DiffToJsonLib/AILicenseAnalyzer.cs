@@ -14,6 +14,7 @@
    limitations under the License.
  */
 
+using System.IO.Abstractions;
 using Microsoft.Extensions.AI;
 
 namespace DiffToJsonLib;
@@ -21,11 +22,14 @@ namespace DiffToJsonLib;
 public class AILicenseAnalyzer : ILicenseAnalyzer
 {
     private readonly Lazy<IChatClient> _clientLazy;
+    private readonly IFileSystem _fileSystem;
 
-    public AILicenseAnalyzer(IChatClientFactory chatClientFactory)
+    public AILicenseAnalyzer(IChatClientFactory chatClientFactory, IFileSystem fileSystem)
     {
         ArgumentNullException.ThrowIfNull(chatClientFactory);
+        ArgumentNullException.ThrowIfNull(fileSystem);
         _clientLazy = new Lazy<IChatClient>(chatClientFactory.Create);
+        _fileSystem = fileSystem;
     }
 
     /// <summary>
@@ -35,16 +39,16 @@ public class AILicenseAnalyzer : ILicenseAnalyzer
     /// <returns></returns>
     /// <exception cref="FileNotFoundException"></exception>
     /// <exception cref="NullReferenceException"></exception>
-    public async Task<string?> AnalyzeLicenseAsync(FileInfo licenseFile)
+    public async Task<string?> AnalyzeLicenseAsync(IFileInfo licenseFile)
     {
         if(!licenseFile.Exists)
             throw new FileNotFoundException("File not found", licenseFile.FullName);
         
-        string licenseContent = await File.ReadAllTextAsync(licenseFile.FullName);
+        string licenseContent = await _fileSystem.File.ReadAllTextAsync(licenseFile.FullName).ConfigureAwait(false);
         
         if (string.IsNullOrEmpty(licenseContent))
         {
-            throw new NullReferenceException($"License content in directory '{licenseFile}' was null or empty.");
+            throw new ArgumentNullException(nameof(licenseFile), $"License content in directory '{licenseFile}' was null or empty.");
         }
 
         ChatMessage systemPrompt = new(ChatRole.System, 
@@ -60,15 +64,15 @@ public class AILicenseAnalyzer : ILicenseAnalyzer
         ChatResponse response = await client.GetResponseAsync([systemPrompt, userPrompt], new ChatOptions
         {
             Temperature = 0.6f
-        });
+        }).ConfigureAwait(false);
     
 #if DEBUG
         for (int index = 0; index < response.Messages.Count; index++)
         {
-            var msg = response.Messages[index];
-            await Console.Out.WriteLineAsync($"Message Number {index + 1} Role: {msg.Role} Text: {msg.Text}");
+            ChatMessage msg = response.Messages[index];
+            await Console.Out.WriteLineAsync($"Message Number {index + 1} Role: {msg.Role} Text: {msg.Text}").ConfigureAwait(false);
         }
-        await Console.Out.WriteLineAsync("");
+        await Console.Out.WriteLineAsync("").ConfigureAwait(false);
 #endif
     
         string? message = response.Messages
@@ -80,8 +84,8 @@ public class AILicenseAnalyzer : ILicenseAnalyzer
             return null;
         
 #if DEBUG
-        await Console.Out.WriteLineAsync($"RAW Detected: {message}");
-        await Console.Out.WriteLineAsync($"Trimmed License: {trimmed}");
+        await Console.Out.WriteLineAsync($"RAW Detected: {message}").ConfigureAwait(false);
+        await Console.Out.WriteLineAsync($"Trimmed License: {trimmed}").ConfigureAwait(false);
 #endif
         
         return trimmed;

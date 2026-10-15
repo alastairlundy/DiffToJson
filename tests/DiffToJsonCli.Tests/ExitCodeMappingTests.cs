@@ -1,3 +1,4 @@
+using System.IO.Abstractions;
 using System.Runtime.CompilerServices;
 using DiffToJsonCli.Execution;
 using DiffToJsonLib.Abstractions;
@@ -55,7 +56,7 @@ public sealed class ExitCodeMappingTests
 
     private sealed class FakeLicenseAnalyzer : ILicenseAnalyzer
     {
-        public Task<string?> AnalyzeLicenseAsync(FileInfo licenseFile) =>
+        public Task<string?> AnalyzeLicenseAsync(IFileInfo licenseFile) =>
             Task.FromResult<string?>("MIT");
     }
 
@@ -104,6 +105,7 @@ public sealed class ExitCodeMappingTests
     {
         RedactionPolicy policy = new(new Dictionary<RedactionTier, Redactor>());
         return new CliExtractionRunPipeline(
+            new FileSystem(),
             parser,
             new FakeLicenseAnalyzer(),
             new FakeEffortMatrix(),

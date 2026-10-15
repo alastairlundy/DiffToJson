@@ -34,9 +34,7 @@ public static class ModelsDevProviderMap
     public static string Normalize(string cliProviderName)
     {
         if (string.IsNullOrWhiteSpace(cliProviderName))
-        {
             return string.Empty;
-        }
 
         string trimmed = cliProviderName.Trim();
         return ProviderMap.TryGetValue(trimmed, out string? canonical)
