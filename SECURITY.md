@@ -12,6 +12,9 @@ Versions that are currently supported with Bug Fixes and/or Security Fixes.
 | ------- | ------------------ |
 | 0.x   | :white_check_mark: |
 
+## Dependency Advisories
+Upstream dependency advisories that are unreachable in DiffToJson are noted in release notes rather than published as advisories.
+
 ## Reporting a Vulnerability
 To report a security vulnerability please privately report a Security Vulnerability in the [Security tab](https://github.com/alastairlundy/DiffToJson/security) on this project within GitHub.
 Please ensure you provide all the details regarding the vulnerability. I will try to reply to your report within 2-3 Business Days acknowledging receipt of it.
