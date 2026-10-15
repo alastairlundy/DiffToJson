@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] - 2026-10-15
+
+### Added
+
+- New extraction run pipeline: library-side contracts (`IExtractionRunPipeline`, `RunInputs`, `RunProgress`) plus a CLI-side `CliExtractionRunPipeline` implementation, wired into DI with a thin CLI adapter delegating to it.
+- Explicit `ExitCode` mapping for pipeline outcomes and cancellation.
+- Reasoning effort matrix entries exposed through `IReasoningEffortMatrix` / `ReasoningEffortMatrix`.
+- Prompt placeholder vocabulary widened to five placeholders.
+- New `DiffToJsonCli.Tests` project covering pipeline precedence, gates, fallback, effort, dispatch, phases, facts, cancellation and exit codes; added to the solution and CI workflow.
+
+### Changed
+
+- Updated CliInvoke to 3.0.3 (3.0.0 is affected by [GHSA-h4rx-7jm8-fr3g](https://github.com/alastairlundy/CliInvoke/security/advisories/GHSA-h4rx-7jm8-fr3g)), but DiffToJson never invokes a runner, so the vulnerable code path is unreachable
+- `Program.cs` substantially reworked to delegate to the extraction run pipeline; license file discovery moved out of the CLI helpers.
+- Dependabot configuration: schedules tuned and a version cooldown added.
+- **Runtime dependencies**: `CliInvoke` and `CliInvoke.Core` 3.0.0 to 3.0.3; `Anthropic` 12.48.0 to 12.57.0; `Microsoft.Extensions.AI.Abstractions`, `Microsoft.Extensions.AI.OpenAI` and `Microsoft.Extensions.Compliance.Redaction` 10.10.0 to 10.11.0; `Microsoft.Extensions.DependencyInjection` 10.0.12 to 10.0.13; `OllamaSharp` 5.4.30 to 5.5.0; `Kevlar` 1.1.1 to 1.3.0; `System.CommandLine` 2.0.12 to 2.0.13.
+- **Testing dependencies**: `TUnit` 1.68.4 to 1.75.0.
+- `GLOSSARY.md` updated with new pipeline terminology.
+
+### Fixed
+
+- `GitLogParser` output is now platform-independent, and golden file comparison normalizes line endings across OSes.
+- Code review findings addressed across the extraction run pipeline.
+
 ## [0.6.0] - 2026-09-18
 
 ### Global (defaulted)
@@ -36,4 +60,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Hardened the capability cache, made startup non-blocking when capability data is missing, and fixed model ID normalization and dispatch.
 - Fixed Verify snapshot line-ending failures on Windows.
 
+[0.7.0]: https://github.com/alastairlundy/DiffToJson/compare/0.6.0...0.7.0
 [0.6.0]: https://github.com/alastairlundy/DiffToJson/compare/0.5.1...0.6.0
