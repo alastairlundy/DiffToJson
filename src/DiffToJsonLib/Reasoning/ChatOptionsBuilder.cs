@@ -66,23 +66,18 @@ public sealed class ChatOptionsBuilder : IChatOptionsBuilder
 
     private static void BuildOpenAiStyleEffortChatOptions(ChatOptions options, ReasoningEffort effort)
     {
-        MeAiReasoningEffort? meaiEffort = effort switch
+        MeAiReasoningEffort meaiEffort = effort switch
         {
-            ReasoningEffort.Auto => MeAiReasoningEffort.Low,
-            ReasoningEffort.On => MeAiReasoningEffort.Low,
-            ReasoningEffort.Off => null,
+            ReasoningEffort.Auto or ReasoningEffort.On=> MeAiReasoningEffort.Medium,
+            ReasoningEffort.Off => MeAiReasoningEffort.None,
             ReasoningEffort.Low => MeAiReasoningEffort.Low,
             ReasoningEffort.Medium => MeAiReasoningEffort.Medium,
             ReasoningEffort.High => MeAiReasoningEffort.High,
-            ReasoningEffort.XHigh => MeAiReasoningEffort.ExtraHigh,
-            ReasoningEffort.Max => MeAiReasoningEffort.ExtraHigh,
-            _ => null
+            ReasoningEffort.XHigh or ReasoningEffort.Max => MeAiReasoningEffort.ExtraHigh,
+            _ => throw new ArgumentException("Invalid effort type", nameof(effort)),
         };
 
-        if (meaiEffort.HasValue)
-        {
-            options.Reasoning = new ReasoningOptions { Effort = meaiEffort.Value };
-        }
+        options.Reasoning = new ReasoningOptions { Effort = meaiEffort };
     }
 
     private static void BuildAnthropicEffortChatOptions(ChatOptions options, ReasoningEffort effort)
@@ -91,7 +86,7 @@ public sealed class ChatOptionsBuilder : IChatOptionsBuilder
         {
             ReasoningEffort.Auto => null,
             ReasoningEffort.On => null,
-            ReasoningEffort.Off => null,
+            ReasoningEffort.Off => "off",
             ReasoningEffort.Low => "low",
             ReasoningEffort.Medium => "medium",
             ReasoningEffort.High => "high",
@@ -167,19 +162,19 @@ public sealed class ChatOptionsBuilder : IChatOptionsBuilder
         bool enableThinking = effort switch
         {
             ReasoningEffort.Off => false,
-            _ => true
+            _ => true,
         };
 
         options.AdditionalProperties ??= new AdditionalPropertiesDictionary();
         options.AdditionalProperties["chat_template_kwargs"] = new Dictionary<string, object>(StringComparer.Ordinal)
         {
-            ["enable_thinking"] = enableThinking
+            ["enable_thinking"] = enableThinking,
         };
     }
 
     private static void BuildMiniMaxToggleChatOptions(ChatOptions options, ReasoningEffort effort)
     {
-        string? thinkingType = effort switch
+        string thinkingType = effort switch
         {
             ReasoningEffort.Off => "disabled",
             ReasoningEffort.Auto => "adaptive",
