@@ -87,6 +87,7 @@ public class ModelIdNormalizerTests
     [Test]
     public async Task NullInput_ReturnsNull()
     {
+        // ReSharper disable once NullableWarningSuppressionIsUsed
         string? result = ModelIdNormalizer.ResolveModelId(null!, null);
         await Assert.That(result).IsNull();
     }

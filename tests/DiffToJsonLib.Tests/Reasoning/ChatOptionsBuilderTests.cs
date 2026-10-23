@@ -202,7 +202,7 @@ public class ChatOptionsBuilderTests
         ChatOptions result = Builder.BuildChatOptions(options, ReasoningEffort.Low, "anthropic", "claude-opus-4-5");
 
         IDictionary<string, object>? thinking = result.AdditionalProperties["thinking"] as IDictionary<string, object>;
-        long budgetTokens = (long)thinking!["budget_tokens"];
+        long budgetTokens = (long)thinking["budget_tokens"];
         await Assert.That(budgetTokens).IsEqualTo(1024);
     }
 
@@ -342,7 +342,7 @@ public class ChatOptionsBuilderTests
         ChatOptions openai = Builder.BuildChatOptions(ReasoningEffort.High, "openai", "gpt-4o");
 
         await Assert.That(v4.Reasoning).IsNotNull();
-        await Assert.That(v4.Reasoning!.Effort).IsEqualTo(openai.Reasoning!.Effort);
+        await Assert.That(v4.Reasoning.Effort).IsEqualTo(openai.Reasoning!.Effort);
     }
 
     // --- Unknown fallback (null reasoning type) ---

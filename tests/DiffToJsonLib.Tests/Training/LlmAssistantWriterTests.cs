@@ -229,7 +229,7 @@ public class LlmAssistantWriterTests
             "system", "user", SampleCommit, expectedOptions, CancellationToken.None);
 
         await Assert.That(client.CapturedOptions).IsNotNull();
-        await Assert.That(client.CapturedOptions!.ModelId).IsEqualTo("test-model");
-        await Assert.That(client.CapturedOptions!.Temperature).IsEqualTo(0.5f);
+        await Assert.That(client.CapturedOptions.ModelId).IsEqualTo("test-model");
+        await Assert.That(client.CapturedOptions.Temperature).IsEqualTo(0.5f);
     }
 }

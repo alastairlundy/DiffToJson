@@ -55,6 +55,7 @@ public class ModelsDevProviderMapTests
     [Test]
     public async Task NullProvider_ReturnsFalse()
     {
+        // ReSharper disable once NullableWarningSuppressionIsUsed
         bool found = ModelsDevProviderMap.TryGetProviderId(null!, out string _);
         await Assert.That(found).IsFalse();
     }

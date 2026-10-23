@@ -218,7 +218,7 @@ public sealed class ExitCodeMappingTests
             }
 
             await Assert.That(caught).IsNotNull();
-            await Assert.That(ExitCode.FromException(caught!)).IsEqualTo(ExitCode.UsageError);
+            await Assert.That(ExitCode.FromException(caught)).IsEqualTo(ExitCode.UsageError);
         }
         finally
         {
@@ -264,7 +264,7 @@ public sealed class ExitCodeMappingTests
             }
 
             await Assert.That(caught).IsNotNull();
-            await Assert.That(ExitCode.FromException(caught!)).IsEqualTo(ExitCode.UsageError);
+            await Assert.That(ExitCode.FromException(caught)).IsEqualTo(ExitCode.UsageError);
         }
         finally
         {
@@ -310,7 +310,7 @@ public sealed class ExitCodeMappingTests
             }
 
             await Assert.That(caught).IsNotNull();
-            await Assert.That(ExitCode.FromException(caught!)).IsEqualTo(ExitCode.UsageError);
+            await Assert.That(ExitCode.FromException(caught)).IsEqualTo(ExitCode.UsageError);
         }
         finally
         {
@@ -358,7 +358,7 @@ public sealed class ExitCodeMappingTests
             }
 
             await Assert.That(caught).IsNotNull();
-            await Assert.That(ExitCode.FromException(caught!)).IsEqualTo(ExitCode.RunFailure);
+            await Assert.That(ExitCode.FromException(caught)).IsEqualTo(ExitCode.RunFailure);
         }
         finally
         {
@@ -400,7 +400,7 @@ public sealed class ExitCodeMappingTests
             }
 
             await Assert.That(caught).IsNotNull();
-            await Assert.That(ExitCode.FromException(caught!)).IsEqualTo(ExitCode.UsageError);
+            await Assert.That(ExitCode.FromException(caught)).IsEqualTo(ExitCode.UsageError);
         }
         finally
         {
@@ -445,7 +445,7 @@ public sealed class ExitCodeMappingTests
             }
 
             await Assert.That(caught).IsNotNull();
-            await Assert.That(ExitCode.FromException(caught!)).IsEqualTo(ExitCode.Cancelled);
+            await Assert.That(ExitCode.FromException(caught)).IsEqualTo(ExitCode.Cancelled);
         }
         finally
         {
