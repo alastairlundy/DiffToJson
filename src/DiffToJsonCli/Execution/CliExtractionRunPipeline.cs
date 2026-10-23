@@ -378,23 +378,16 @@ public sealed class CliExtractionRunPipeline : IExtractionRunPipeline
         }
 
         return new SharedSetup(
-            workingDir, repoName, repoUrl, license, outputPath,
-            tier, effort, provider, credential, endpoint, model);
+            workingDir, repoName, repoUrl, license, outputPath, tier);
     }
 
-    //TODO: Find out why positional properties are required if never used.
     private sealed record SharedSetup(
         string RepoDirectory,
         string RepoName,
         string RepoUrl,
         string License,
         string OutputPath,
-        RedactionTier Tier,
-        ReasoningEffort Effort,
-        string Provider,
-        string Credential,
-        string Endpoint,
-        string Model);
+        RedactionTier Tier);
 
     private static RedactionTier ParseRedactionTier(string value)
     {

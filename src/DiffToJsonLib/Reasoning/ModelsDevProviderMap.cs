@@ -1,6 +1,6 @@
 namespace DiffToJsonLib.Reasoning;
 
-public static class ModelsDevProviderMap
+internal static class ModelsDevProviderMap
 {
     private static readonly IReadOnlyDictionary<string, string> ProviderMap =
         new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
