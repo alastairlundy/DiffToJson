@@ -38,13 +38,13 @@ public sealed class ChatOptionsBuilder : IChatOptionsBuilder
                 BuildToggleChatOptions(options, reasoningEffort, provider);
                 break;
             case AIModelReasoningOptionType.BudgetTokens:
-                BuildBudgetChatOptions(options, reasoningEffort, provider);
+                BuildBudgetChatOptions(options, reasoningEffort);
                 break;
             case AIModelReasoningOptionType.Effort:
                 BuildEffortChatOptions(options, reasoningEffort, provider);
                 break;
+            // ReSharper disable once RedundantEmptySwitchSection
             default:
-                ApplyNonCoTFallback(options, reasoningEffort, provider);
                 break;
         }
 
@@ -102,8 +102,7 @@ public sealed class ChatOptionsBuilder : IChatOptionsBuilder
         }
     }
 
-    //TODO: Find out why provider is a parameter if it's never used.
-    private static void BuildBudgetChatOptions(ChatOptions options, ReasoningEffort effort, string provider)
+    private static void BuildBudgetChatOptions(ChatOptions options, ReasoningEffort effort)
     {
         if (effort == ReasoningEffort.Off)
         {
@@ -148,12 +147,20 @@ public sealed class ChatOptionsBuilder : IChatOptionsBuilder
                  string.Equals(canonical, "openai", StringComparison.OrdinalIgnoreCase) ||
                  string.Equals(canonical, "openrouter", StringComparison.OrdinalIgnoreCase))
         {
-            //TODO: Address this weird else if and else both calling the same code
             BuildMiniMaxToggleChatOptions(options, effort);
         }
         else
         {
-            BuildMiniMaxToggleChatOptions(options, effort);
+            string thinkingType = effort switch
+            {
+                ReasoningEffort.Off => "false",
+                // ReSharper disable once RedundantSwitchExpressionArms
+                ReasoningEffort.Auto => "true",
+                _ => "true",
+            };
+
+            options.AdditionalProperties ??= new AdditionalPropertiesDictionary();
+            options.AdditionalProperties["thinking"] = thinkingType;
         }
     }
 
@@ -183,10 +190,5 @@ public sealed class ChatOptionsBuilder : IChatOptionsBuilder
 
         options.AdditionalProperties ??= new AdditionalPropertiesDictionary();
         options.AdditionalProperties["thinking"] = thinkingType;
-    }
-
-    //TODO: Find out why this exists if it's not used.
-    private static void ApplyNonCoTFallback(ChatOptions options, ReasoningEffort effort, string provider)
-    {
     }
 }

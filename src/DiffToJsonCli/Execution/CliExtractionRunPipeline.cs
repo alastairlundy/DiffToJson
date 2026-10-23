@@ -90,9 +90,7 @@ public sealed class CliExtractionRunPipeline : IExtractionRunPipeline
     {
         ArgumentNullException.ThrowIfNull(input);
         cancellationToken.ThrowIfCancellationRequested();
-
-        string provider = input.Provider.EffectiveValue;
-        string credential = input.Credential.EffectiveValue;
+        
         string endpoint = input.Endpoint.EffectiveValue;
         string model = input.Model.EffectiveValue;
 
@@ -120,12 +118,11 @@ public sealed class CliExtractionRunPipeline : IExtractionRunPipeline
         SharedSetup setup = await ResolveSharedSetupAsync(
             input.RepoDirectory,
             input.RepoUrl, input.License,
-            input.OutputPath, tier, effort,
-            provider, credential,
+            input.OutputPath, tier,
             endpoint, model,
             llmAssistantOutput: false,
-            progress,
-            cancellationToken).ConfigureAwait(false);
+            progress: progress,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
 
         progress?.Report(new RunProgress(RunPhase.ParsingCommits, $"Parsing commits from {setup.RepoDirectory}."));
 
@@ -218,8 +215,7 @@ public sealed class CliExtractionRunPipeline : IExtractionRunPipeline
             input.RepoDirectory,
             input.RepoUrl, input.License,
             input.OutputPath,
-            tier, effort,
-            provider, credential,
+            tier,
             endpoint, model,
             input.LlmAssistantOutput, progress,
             cancellationToken).ConfigureAwait(false);
@@ -300,9 +296,6 @@ public sealed class CliExtractionRunPipeline : IExtractionRunPipeline
         string licenseProvided,
         string outputPathRaw,
         RedactionTier tier,
-        ReasoningEffort effort,
-        string provider,
-        string credential,
         string endpoint,
         string model,
         bool llmAssistantOutput,

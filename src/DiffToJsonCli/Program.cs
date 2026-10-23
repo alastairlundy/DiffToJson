@@ -17,6 +17,7 @@
 using System.CommandLine;
 using System.IO.Abstractions;
 using CliInvoke.Extensions;
+using DiffToJsonCli;
 using DiffToJsonCli.Execution;
 using DiffToJsonLib.Training;
 using DiffToJsonLib.Training.Abstractions;
@@ -220,7 +221,7 @@ rootCommand.SetAction(async (result, invocationToken) =>
     bool isRaw = string.Equals(format, "raw", StringComparison.OrdinalIgnoreCase);
 
     RunRawInput? rawInput = isRaw
-        ? new(
+        ? new RunRawInput(
             repoDirectoryValue?.FullName ?? "",
             repoUrl,
             license,
@@ -295,19 +296,3 @@ rootCommand.SetAction(async (result, invocationToken) =>
 ParseResult parseResult = rootCommand.Parse(args);
 
 return await parseResult.InvokeAsync().ConfigureAwait(true);
-
-/// <summary>
-/// Synchronous progress sink: writes each <see cref="RunProgress"/> message to the
-/// console as it is reported. Warnings are routed to standard error; all other
-/// phases go to standard output.
-/// </summary>
-sealed class ConsoleProgress : IProgress<RunProgress>
-{
-    public void Report(RunProgress value)
-    {
-        TextWriter writer = value.Phase == RunPhase.Warning ? Console.Error : Console.Out;
-        writer.WriteLine(value.Message);
-    }
-}
-
-

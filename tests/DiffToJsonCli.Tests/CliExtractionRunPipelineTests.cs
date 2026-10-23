@@ -1,10 +1,3 @@
-using System.IO.Abstractions;
-using System.Runtime.CompilerServices;
-using DiffToJsonCli.Execution;
-using DiffToJsonLib.Abstractions;
-using DiffToJsonLib.Models;
-using DiffToJsonLib.Reasoning;
-using DiffToJsonLib.Redactors;
 using DiffToJsonLib.Training;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Compliance.Redaction;
@@ -411,7 +404,7 @@ public sealed class CliExtractionRunPipelineTests
             NotSupportedException? caught = null;
             try
             {
-                List<RunProgress> phases = new();
+                List<RunProgress> phases = [];
                 await pipeline.RunTrainingAsync(
                     input, new LambdaProgress(p => phases.Add(p)), CancellationToken.None);
             }
@@ -421,7 +414,7 @@ public sealed class CliExtractionRunPipelineTests
             }
 
             await Assert.That(caught).IsNotNull();
-            await Assert.That(caught!.Message.Contains("opt-provider")).IsTrue();
+            await Assert.That(caught.Message.Contains("opt-provider")).IsTrue();
             await Assert.That(caught.Message.Contains("opt-model")).IsTrue();
             await Assert.That(caught.Message.Contains("env-provider")).IsFalse();
             await Assert.That(caught.Message.Contains("env-model")).IsFalse();
@@ -521,7 +514,7 @@ public sealed class CliExtractionRunPipelineTests
             }
 
             await Assert.That(caught).IsNotNull();
-            await Assert.That(caught!.Message.Contains("--llm-assistant-output")).IsTrue();
+            await Assert.That(caught.Message.Contains("--llm-assistant-output")).IsTrue();
         }
         finally
         {
@@ -552,7 +545,7 @@ public sealed class CliExtractionRunPipelineTests
             }
 
             await Assert.That(caught).IsNotNull();
-            await Assert.That(caught!.Message.Contains("--llm-override-prompt")).IsTrue();
+            await Assert.That(caught.Message.Contains("--llm-override-prompt")).IsTrue();
         }
         finally
         {
@@ -583,7 +576,7 @@ public sealed class CliExtractionRunPipelineTests
             }
 
             await Assert.That(caught).IsNotNull();
-            await Assert.That(caught!.Message.Contains("--llm-override-prompt")).IsTrue();
+            await Assert.That(caught.Message.Contains("--llm-override-prompt")).IsTrue();
         }
         finally
         {
@@ -614,7 +607,7 @@ public sealed class CliExtractionRunPipelineTests
             }
 
             await Assert.That(caught).IsNotNull();
-            await Assert.That(caught!.Message.Contains("--reasoning-effort")).IsTrue();
+            await Assert.That(caught.Message.Contains("--reasoning-effort")).IsTrue();
         }
         finally
         {
@@ -645,7 +638,7 @@ public sealed class CliExtractionRunPipelineTests
             }
 
             await Assert.That(caught).IsNotNull();
-            await Assert.That(caught!.Message.Contains("--reasoning-effort")).IsTrue();
+            await Assert.That(caught.Message.Contains("--reasoning-effort")).IsTrue();
         }
         finally
         {
@@ -829,7 +822,7 @@ public sealed class CliExtractionRunPipelineTests
             }
 
             await Assert.That(caught).IsNotNull();
-            await Assert.That(caught!.Message.Contains("Supported values:")).IsTrue();
+            await Assert.That(caught.Message.Contains("Supported values:")).IsTrue();
             await Assert.That(caught.Message.Contains("auto")).IsTrue();
         }
         finally
@@ -860,7 +853,7 @@ public sealed class CliExtractionRunPipelineTests
             }
 
             await Assert.That(caught).IsNotNull();
-            await Assert.That(caught!.Message.Contains("Supported values:")).IsTrue();
+            await Assert.That(caught.Message.Contains("Supported values:")).IsTrue();
         }
         finally
         {
@@ -900,7 +893,7 @@ public sealed class CliExtractionRunPipelineTests
             }
 
             await Assert.That(caught).IsNotNull();
-            await Assert.That(caught!.Message.Contains("test-provider")).IsTrue();
+            await Assert.That(caught.Message.Contains("test-provider")).IsTrue();
             await Assert.That(caught.Message.Contains("test-model")).IsTrue();
             await Assert.That(caught.Message.Contains("Supported values:")).IsTrue();
             await Assert.That(caught.Message.Contains("auto")).IsTrue();
@@ -933,7 +926,7 @@ public sealed class CliExtractionRunPipelineTests
             }
 
             await Assert.That(caught).IsNotNull();
-            await Assert.That(caught!.Message.Contains("Supported values:")).IsTrue();
+            await Assert.That(caught.Message.Contains("Supported values:")).IsTrue();
         }
         finally
         {
@@ -949,6 +942,7 @@ public sealed class CliExtractionRunPipelineTests
     public async Task Raw_Dispatch_NeverReportsBuildingExamples()
     {
         TestSeams seams = CreateSeams();
+        // ReSharper disable once RedundantArgumentDefaultValue
         seams.Parser.Commits.Add(SampleCommit("1"));
         seams.Parser.Commits.Add(SampleCommit("2"));
         CliExtractionRunPipeline pipeline = CreatePipeline(seams);
@@ -987,6 +981,7 @@ public sealed class CliExtractionRunPipelineTests
     public async Task Training_Dispatch_ReportsBuildingExamples()
     {
         TestSeams seams = CreateSeams();
+        // ReSharper disable once RedundantArgumentDefaultValue
         seams.Parser.Commits.Add(SampleCommit("1"));
         seams.Parser.Commits.Add(SampleCommit("2"));
         CliExtractionRunPipeline pipeline = CreatePipeline(seams);
@@ -1025,6 +1020,7 @@ public sealed class CliExtractionRunPipelineTests
     public async Task Facts_Content_OutputPathLicenseCount()
     {
         TestSeams seams = CreateSeams();
+        // ReSharper disable once RedundantArgumentDefaultValue
         seams.Parser.Commits.Add(SampleCommit("1"));
         seams.Parser.Commits.Add(SampleCommit("2"));
         seams.Parser.Commits.Add(SampleCommit("3"));

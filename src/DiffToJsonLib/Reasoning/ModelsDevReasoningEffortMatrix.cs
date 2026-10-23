@@ -11,7 +11,7 @@ public sealed class ModelsDevReasoningEffortMatrix : IReasoningEffortMatrix
 
     private static readonly HashSet<ReasoningEffort> ToggleSet =
     [
-        ReasoningEffort.Auto, ReasoningEffort.On, ReasoningEffort.Off
+        ReasoningEffort.Auto, ReasoningEffort.On, ReasoningEffort.Off,
     ];
 
     // Intentional: BudgetTokens Type carries no values list, so the
@@ -66,6 +66,9 @@ public sealed class ModelsDevReasoningEffortMatrix : IReasoningEffortMatrix
 
     private async Task<CacheStatus> GetCacheStatusCoreAsync(CancellationToken cancellationToken)
     {
+        if (_cache is null)
+            return CacheStatus.Unavailable;
+        
         CapabilityCacheResult result = await _cache.GetProviderInfosAsync(cancellationToken).ConfigureAwait(false);
         return result.Status;
     }
@@ -127,15 +130,15 @@ public sealed class ModelsDevReasoningEffortMatrix : IReasoningEffortMatrix
         if (string.IsNullOrWhiteSpace(model))
             return null;
 
-        AIProviderInfo[] providers = _providers ?? _cache.GetProviderInfosAsync().GetAwaiter().GetResult().Providers ?? [];
+        AIProviderInfo[] providers = _providers ?? _cache?.GetProviderInfosAsync().GetAwaiter().GetResult().Providers ?? [];
 
         // Variant-aware: translate size suffixes (qwen3.5:9b -> qwen3.5-9b)
-        // only when the dash variant exists in the catalog; otherwise fall back
+        // only when the dash variant exists in the catalogue; otherwise fall back
         // gracefully to the stripped id (never fabricated).
         HashSet<string> variants = new(StringComparer.OrdinalIgnoreCase);
         foreach (AIProviderInfo catalogProvider in providers)
         {
-            if (catalogProvider.Models is null)
+            if (catalogProvider.Models.Length == 0)
                 continue;
 
             foreach (AIModelInfo candidate in catalogProvider.Models)
@@ -152,7 +155,7 @@ public sealed class ModelsDevReasoningEffortMatrix : IReasoningEffortMatrix
         if (string.IsNullOrWhiteSpace(provider))
             return FindModelAcrossProviders(providers, normalizedModel);
 
-        if (!ModelsDevProviderMap.TryGetProviderId(provider, out string modelsDevProviderId))
+        if (!ModelsDevProviderMap.TryGetProviderId(provider, out string? modelsDevProviderId))
             return FindModelAcrossProviders(providers, normalizedModel);
 
         AIProviderInfo? providerInfo = Array.Find(providers, p =>

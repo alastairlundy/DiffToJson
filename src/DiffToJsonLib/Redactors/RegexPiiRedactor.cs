@@ -29,7 +29,7 @@ public partial class RegexPiiRedactor : Redactor
     }
 
     [GeneratedRegex(@"<([^>\s]+@[^>\s]+\.[^>\s]+)>|\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b",
-        RegexOptions.Compiled | RegexOptions.ExplicitCapture)]
+        RegexOptions.Compiled | RegexOptions.ExplicitCapture, 3000)]
     private static partial Regex MyRegex { get; }
 
     public override string Redact(string? source)
