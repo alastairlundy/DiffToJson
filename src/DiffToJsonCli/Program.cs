@@ -63,28 +63,28 @@ Option<DirectoryInfo> repoDirectoryOption = new("--repo-directory")
 {
     Description = "The local git repository directory. Falls back to the current directory if not provided.",
     DefaultValueFactory = _ => new DirectoryInfo(Directory.GetCurrentDirectory()),
-    Required = false
+    Required = false,
 };
 
 Option<string> repoUrlOption = new("--repo-url")
 {
     Description = "The URL of the git repository.",
     DefaultValueFactory = _ => "",
-    Required = false
+    Required = false,
 };
 
 Option<string> modelIdOption = new("--model-id")
 {
     Description = "The model id of the AI model to use",
     DefaultValueFactory = _ => "",
-    Required = false
+    Required = false,
 };
 
 Option<string> endpointUrlOption = new("--endpoint-url")
 {
     Description = "The endpoint URL of the OpenAI compatible API endpoint to use.",
     DefaultValueFactory = _ => "",
-    Required = false
+    Required = false,
 };
 
 Option<string> apiKeyOption = new("--api-key")
@@ -105,65 +105,65 @@ Option<string> licenseOption = new("--license")
 {
     Description = "The licence name to use for the JSON.",
     Required = false,
-    DefaultValueFactory = _ => ""
+    DefaultValueFactory = _ => "",
 };
 
 Option<string> outputFilePathOption = new("--output", ["-o"])
 {
     Description = "The output file path. If not specified, the default is the repository directory path.",
     Required = false,
-    DefaultValueFactory = _ => ""
+    DefaultValueFactory = _ => "",
 };
 
 Option<string> formatOption = new("--format")
 {
     Description = "The output format. 'training' produces camelCase JSONL for AI training; 'raw' produces the legacy PascalCase JSONL.",
-    DefaultValueFactory = _ => "training"
+    DefaultValueFactory = _ => "training",
 };
 formatOption.AcceptOnlyFromAmong("training", "raw");
 
 Option<string> promptStyleOption = new("--prompt-style")
 {
     Description = "The prompt preset to use for training records.",
-    DefaultValueFactory = _ => "default"
+    DefaultValueFactory = _ => "default",
 };
 promptStyleOption.AcceptOnlyFromAmong("default", "conventional");
 
 Option<string> systemPromptOption = new("--system-prompt")
 {
     Description = "Override the system prompt template. Supports placeholders: {diff}, {commitMessage}, {repoName}, {license}, {repoUrl}.",
-    DefaultValueFactory = _ => ""
+    DefaultValueFactory = _ => "",
 };
 
 Option<string> userPromptOption = new("--user-prompt")
 {
     Description = "Override the user prompt template. Supports placeholders: {diff}, {commitMessage}, {repoName}, {license}, {repoUrl}.",
-    DefaultValueFactory = _ => ""
+    DefaultValueFactory = _ => "",
 };
 
 Option<bool> llmAssistantOutputOption = new("--llm-assistant-output")
 {
     Description = "Enable LLM-generated assistant messages for each commit. Requires --provider, --model-id, --api-key, and --endpoint-url.",
-    DefaultValueFactory = _ => false
+    DefaultValueFactory = _ => false,
 };
 
 Option<string> llmOverridePromptOption = new("--llm-override-prompt")
 {
     Description = "Override the user prompt sent to the LLM when --llm-assistant-output is enabled. Supports placeholders.",
-    DefaultValueFactory = _ => ""
+    DefaultValueFactory = _ => "",
 };
 
 Option<string> reasoningEffortOption = new("--reasoning-effort")
 {
     Description = "The reasoning effort level used by the AI model. Valid values: auto, on, off, low, medium, high, xhigh, max. Valid values depend on the active (provider, model).",
     DefaultValueFactory = _ => "auto",
-    Required = false
+    Required = false,
 };
 
 Option<string> redactionOption = new("--redaction")
 {
     Description = "PII redaction tier for training records. 'none' disables redaction; 'message' redacts only commit messages; 'diff' redacts only diffs; 'all' redacts both.",
-    DefaultValueFactory = _ => "message"
+    DefaultValueFactory = _ => "message",
 };
 redactionOption.AcceptOnlyFromAmong("message", "diff", "all", "none");
 
@@ -184,7 +184,7 @@ RootCommand rootCommand = new("Detects and Serializes Git Diffs and Commits to a
     llmAssistantOutputOption,
     llmOverridePromptOption,
     reasoningEffortOption,
-    redactionOption
+    redactionOption,
 };
 
 rootCommand.SetAction(async (result, invocationToken) =>
@@ -216,41 +216,6 @@ rootCommand.SetAction(async (result, invocationToken) =>
 
     bool isRaw = string.Equals(format, "raw", StringComparison.OrdinalIgnoreCase);
 
-    RunRawInput? rawInput = isRaw
-        ? new RunRawInput(
-            repoDirectoryValue?.FullName ?? "",
-            repoUrl,
-            license,
-            outputPath,
-            redaction,
-            reasoningEffort,
-            llmAssistantOutput,
-            llmOverridePrompt,
-            provider,
-            credential,
-            endpoint,
-            model)
-        : null;
-
-    RunTrainingInput? trainingInput = isRaw
-        ? null
-        : new(
-            repoDirectoryValue?.FullName ?? "",
-            repoUrl,
-            license,
-            outputPath,
-            redaction,
-            reasoningEffort,
-            llmAssistantOutput,
-            llmOverridePrompt,
-            provider,
-            credential,
-            endpoint,
-            model,
-            promptStyle,
-            systemPromptOverride,
-            userPromptOverride);
-
     // Per-run chat credentials for the injected seams. Validation and
     // fallback authority stays in the pipeline, which re-resolves from the raw input.
     services.AddSingleton<IChatClientFactory>(_ => new ChatClientFactory(
@@ -265,19 +230,57 @@ rootCommand.SetAction(async (result, invocationToken) =>
     IExtractionRunPipeline pipeline = serviceProvider.GetRequiredService<IExtractionRunPipeline>();
 
     // Ctrl+C handling is owned by System.CommandLine: invocationToken is already
-    // cancelled on process termination, which the pipeline honors end to end.
+    // cancelled on process termination, which the pipeline honours end to end.
     try
     {
         // Render every console line from pipeline progress, synchronously, so the
         // reported order matches the pipeline's report order. Warnings go to stderr.
         IProgress<RunProgress> progress = new ConsoleProgress();
+        ExtractionRunFacts facts;
+        
+        if(isRaw)
+        {
+            RunRawInput rawInput = new(
+                repoDirectoryValue?.FullName ?? "",
+                repoUrl,
+                license,
+                outputPath,
+                redaction,
+                reasoningEffort,
+                llmAssistantOutput,
+                llmOverridePrompt,
+                provider,
+                credential,
+                endpoint,
+                model); 
+            
+            facts = await pipeline.RunRawAsync(rawInput, progress, invocationToken)
+                .ConfigureAwait(true);
+        }
+        else
+        {
+            RunTrainingInput trainingInput = new(
+                repoDirectoryValue?.FullName ?? "",
+                repoUrl,
+                license,
+                outputPath,
+                redaction,
+                reasoningEffort,
+                llmAssistantOutput,
+                llmOverridePrompt,
+                provider,
+                credential,
+                endpoint,
+                model,
+                promptStyle,
+                systemPromptOverride,
+                userPromptOverride);
+            
+            facts = await pipeline.RunTrainingAsync(trainingInput, progress, invocationToken).ConfigureAwait(true);
+        }
 
-        ExtractionRunFacts facts = isRaw
-            ? await pipeline.RunRawAsync(rawInput, progress, invocationToken)
-                .ConfigureAwait(true) : 
-            await pipeline.RunTrainingAsync(trainingInput, progress, invocationToken).ConfigureAwait(true);
-
-        await Console.Out.WriteLineAsync($"Successfully wrote {facts.RecordCount} commits to {facts.OutputPath} (License: {facts.License})").ConfigureAwait(true);
+        await Console.Out.WriteLineAsync($"Successfully wrote {facts.RecordCount} commits to {facts.OutputPath} (License: {facts.License})")
+            .ConfigureAwait(true);
         return ExitCode.Success;
     }
     catch (Exception ex)

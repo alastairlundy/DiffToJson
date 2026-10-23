@@ -23,14 +23,13 @@ public class GitLogParser
     public async IAsyncEnumerable<RawCommit> ParseAsync(TextReader reader,
         [EnumeratorCancellation] CancellationToken ct)
     {
-        string? line;
         bool isCollectingMessage = false;
         bool isCollectingDiff = false;
 
         StringBuilder messageBuilder = new();
         StringBuilder diffBuilder = new();
 
-        while ((line = await reader.ReadLineAsync(ct).ConfigureAwait(false)) != null)
+        while (await reader.ReadLineAsync(ct).ConfigureAwait(false) is { } line)
         {
             line = line.Replace("\r\n", "\n", StringComparison.OrdinalIgnoreCase).Replace('\r', '\n');
 

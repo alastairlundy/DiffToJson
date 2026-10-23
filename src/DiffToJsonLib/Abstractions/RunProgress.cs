@@ -21,8 +21,3 @@ namespace DiffToJsonLib.Abstractions;
 /// The adapter renders all console text from these values.
 /// </summary>
 public sealed record RunProgress(RunPhase Phase, string Message);
-
-/// <summary>
-/// Success facts returned by an extraction run for adapter rendering.
-/// </summary>
-public sealed record ExtractionRunFacts(string OutputPath, string License, int RecordCount);

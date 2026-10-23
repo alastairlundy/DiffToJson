@@ -404,6 +404,7 @@ public sealed class CliExtractionRunPipelineTests
             NotSupportedException? caught = null;
             try
             {
+                //TODO: Figure out why phases is needed here.
                 List<RunProgress> phases = [];
                 await pipeline.RunTrainingAsync(
                     input, new LambdaProgress(p => phases.Add(p)), CancellationToken.None);
