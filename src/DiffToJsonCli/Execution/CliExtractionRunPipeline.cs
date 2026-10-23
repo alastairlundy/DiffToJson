@@ -85,8 +85,7 @@ public sealed class CliExtractionRunPipeline : IExtractionRunPipeline
 
     /// <inheritdoc />
     public async Task<ExtractionRunFacts> RunRawAsync(
-        RunRawInput input,
-        IProgress<RunProgress>? progress,
+        RunRawInput input, IProgress<RunProgress>? progress,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(input);
@@ -100,7 +99,7 @@ public sealed class CliExtractionRunPipeline : IExtractionRunPipeline
         if (input.LlmAssistantOutput)
         {
             throw new ArgumentException(
-                message: "--llm-assistant-output is not compatible with --format raw.");
+                message: "--llm-assistant-output is not compatible with --format raw.", nameof(input));
         }
 
         if (!string.IsNullOrEmpty(input.LlmOverridePrompt) && !input.LlmAssistantOutput)
@@ -115,20 +114,15 @@ public sealed class CliExtractionRunPipeline : IExtractionRunPipeline
         if (effort != ReasoningEffort.Auto && !input.LlmAssistantOutput)
         {
             throw new ArgumentException(
-                "--reasoning-effort requires --llm-assistant-output when set to a value other than 'auto'.");
+                "--reasoning-effort requires --llm-assistant-output when set to a value other than 'auto'.", nameof(input));
         }
 
         SharedSetup setup = await ResolveSharedSetupAsync(
             input.RepoDirectory,
-            input.RepoUrl,
-            input.License,
-            input.OutputPath,
-            tier,
-            effort,
-            provider,
-            credential,
-            endpoint,
-            model,
+            input.RepoUrl, input.License,
+            input.OutputPath, tier, effort,
+            provider, credential,
+            endpoint, model,
             llmAssistantOutput: false,
             progress,
             cancellationToken).ConfigureAwait(false);
@@ -168,7 +162,7 @@ public sealed class CliExtractionRunPipeline : IExtractionRunPipeline
         if (!string.IsNullOrEmpty(input.LlmOverridePrompt) && !input.LlmAssistantOutput)
         {
             throw new ArgumentException(
-                "--llm-override-prompt requires --llm-assistant-output.");
+                "--llm-override-prompt requires --llm-assistant-output.", nameof(input));
         }
 
         RedactionTier tier = ParseRedactionTier(input.Redaction);
@@ -177,7 +171,7 @@ public sealed class CliExtractionRunPipeline : IExtractionRunPipeline
         if (effort != ReasoningEffort.Auto && !input.LlmAssistantOutput)
         {
             throw new ArgumentException(
-                "--reasoning-effort requires --llm-assistant-output when set to a value other than 'auto'.");
+                "--reasoning-effort requires --llm-assistant-output when set to a value other than 'auto'.", nameof(input));
         }
 
         if (input.LlmAssistantOutput && tier == RedactionTier.None)
@@ -222,17 +216,12 @@ public sealed class CliExtractionRunPipeline : IExtractionRunPipeline
 
         SharedSetup setup = await ResolveSharedSetupAsync(
             input.RepoDirectory,
-            input.RepoUrl,
-            input.License,
+            input.RepoUrl, input.License,
             input.OutputPath,
-            tier,
-            effort,
-            provider,
-            credential,
-            endpoint,
-            model,
-            input.LlmAssistantOutput,
-            progress,
+            tier, effort,
+            provider, credential,
+            endpoint, model,
+            input.LlmAssistantOutput, progress,
             cancellationToken).ConfigureAwait(false);
 
         // Chat options (and the matrix queries behind the builder) stay behind LLM runs
@@ -393,6 +382,7 @@ public sealed class CliExtractionRunPipeline : IExtractionRunPipeline
             tier, effort, provider, credential, endpoint, model);
     }
 
+    //TODO: Find out why positional properties are required if never used.
     private sealed record SharedSetup(
         string RepoDirectory,
         string RepoName,

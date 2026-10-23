@@ -16,7 +16,7 @@ public static class ModelsDevProviderMap
             ["deepseek"] = "deepseek",
         };
 
-    public static bool TryGetProviderId(string cliProviderName, out string modelsDevProviderId)
+    public static bool TryGetProviderId(string cliProviderName, out string? modelsDevProviderId)
     {
         if (string.IsNullOrWhiteSpace(cliProviderName))
         {
@@ -24,7 +24,7 @@ public static class ModelsDevProviderMap
             return false;
         }
 
-        return ProviderMap.TryGetValue(cliProviderName.Trim(), out modelsDevProviderId!);
+        return ProviderMap.TryGetValue(cliProviderName.Trim(), out modelsDevProviderId);
     }
 
     /// <summary>

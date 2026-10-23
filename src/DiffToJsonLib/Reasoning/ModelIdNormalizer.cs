@@ -98,6 +98,6 @@ public static partial class ModelIdNormalizer
         return modelId;
     }
 
-    [GeneratedRegex(@"^\d+b$", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"^\d+b$", RegexOptions.IgnoreCase, 3000)]
     private static partial Regex SizePattern { get; }
 }

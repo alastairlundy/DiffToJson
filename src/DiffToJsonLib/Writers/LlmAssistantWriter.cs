@@ -49,7 +49,7 @@ public class LlmAssistantWriter : IAssistantMessageGenerator
 
         try
         {
-            ChatResponse? response = await _pipeline.ExecuteAsync(
+            ChatResponse response = await _pipeline.ExecuteAsync(
                 async ct => await client.GetResponseAsync([system, user], options, ct).ConfigureAwait(false),
                 cancellationToken).ConfigureAwait(false);
 

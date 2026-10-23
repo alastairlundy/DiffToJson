@@ -1,4 +1,3 @@
-using System.IO.Abstractions;
 using System.IO.Abstractions.TestingHelpers;
 using System.Text;
 using DiffToJsonLib.Reasoning;
@@ -64,8 +63,8 @@ public class CapabilityCacheTests
 
         await Assert.That(result.Status).IsEqualTo(CacheStatus.Fresh);
         await Assert.That(result.Providers).IsNotNull();
-        await Assert.That(result.Providers!.Length).IsEqualTo(1);
-        await Assert.That(result.Providers![0].Id).IsEqualTo("test-provider");
+        await Assert.That(result.Providers.Length).IsEqualTo(1);
+        await Assert.That(result.Providers[0].Id).IsEqualTo("test-provider");
     }
 
     [Test]
@@ -94,7 +93,7 @@ public class CapabilityCacheTests
 
         await Assert.That(result.Status).IsEqualTo(CacheStatus.Fresh);
         await Assert.That(result.Providers).IsNotNull();
-        await Assert.That(result.Providers!.Length).IsEqualTo(1);
+        await Assert.That(result.Providers.Length).IsEqualTo(1);
         await Assert.That(fetcher.WasCalled).IsTrue();
     }
 
@@ -125,7 +124,7 @@ public class CapabilityCacheTests
 
         await Assert.That(result.Status).IsEqualTo(CacheStatus.Stale);
         await Assert.That(result.Providers).IsNotNull();
-        await Assert.That(result.Providers!.Length).IsEqualTo(1);
+        await Assert.That(result.Providers.Length).IsEqualTo(1);
     }
 
     [Test]
@@ -169,7 +168,7 @@ public class CapabilityCacheTests
         await Assert.That(result.Status).IsEqualTo(CacheStatus.Fresh);
         await Assert.That(fetcher.WasCalled).IsTrue();
 
-        string timestampContent = fileSystem.File.ReadAllText(TimestampFilePath);
+        string timestampContent = await fileSystem.File.ReadAllTextAsync(TimestampFilePath, CancellationToken.None);
         await Assert.That(DateTimeOffset.TryParse(timestampContent, out _)).IsTrue();
     }
 

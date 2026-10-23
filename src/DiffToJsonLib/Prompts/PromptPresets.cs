@@ -109,6 +109,6 @@ public static partial class PromptPresets
         }
     }
 
-    [GeneratedRegex(@"\{(\w+)\}")]
+    [GeneratedRegex(@"\{(\w+)\}", RegexOptions.IgnoreCase | RegexOptions.ExplicitCapture, 3000)]
     private static partial Regex PlaceholderPattern { get; }
 }

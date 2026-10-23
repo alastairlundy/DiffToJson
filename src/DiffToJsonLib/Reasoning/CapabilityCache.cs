@@ -150,8 +150,8 @@ public sealed class CapabilityCache
             .ConfigureAwait(false);
     }
 
-    private static AIProviderInfo[] Deserialize(byte[] bytes) =>
-        JsonSerializer.Deserialize<AIProviderInfo[]>(bytes, ModelInfoJsonContext.Default.AIProviderInfoArray)!;
+    private static AIProviderInfo[]? Deserialize(byte[] bytes) =>
+        JsonSerializer.Deserialize<AIProviderInfo[]>(bytes, ModelInfoJsonContext.Default.AIProviderInfoArray);
 
     private string GetCacheFilePath() => Path.Combine(_cacheDirectory, "api.json");
 

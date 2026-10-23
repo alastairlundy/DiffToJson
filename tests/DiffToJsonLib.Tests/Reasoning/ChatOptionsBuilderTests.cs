@@ -91,7 +91,7 @@ public class ChatOptionsBuilderTests
         ChatOptions result = Builder.BuildChatOptions(ReasoningEffort.Low, "openai", "gpt-4o");
 
         await Assert.That(result.Reasoning).IsNotNull();
-        await Assert.That(result.Reasoning!.Effort).IsEqualTo(MeaiReasoningEffort.Low);
+        await Assert.That(result.Reasoning.Effort).IsEqualTo(MeaiReasoningEffort.Low);
     }
 
     [Test]
@@ -100,7 +100,7 @@ public class ChatOptionsBuilderTests
         ChatOptions result = Builder.BuildChatOptions(ReasoningEffort.Medium, "openai", "gpt-5");
 
         await Assert.That(result.Reasoning).IsNotNull();
-        await Assert.That(result.Reasoning!.Effort).IsEqualTo(MeaiReasoningEffort.Medium);
+        await Assert.That(result.Reasoning.Effort).IsEqualTo(MeaiReasoningEffort.Medium);
     }
 
     [Test]
@@ -109,7 +109,7 @@ public class ChatOptionsBuilderTests
         ChatOptions result = Builder.BuildChatOptions(ReasoningEffort.High, "openai", "gpt-4.1");
 
         await Assert.That(result.Reasoning).IsNotNull();
-        await Assert.That(result.Reasoning!.Effort).IsEqualTo(MeaiReasoningEffort.High);
+        await Assert.That(result.Reasoning.Effort).IsEqualTo(MeaiReasoningEffort.High);
     }
 
     [Test]
@@ -118,7 +118,7 @@ public class ChatOptionsBuilderTests
         ChatOptions result = Builder.BuildChatOptions(ReasoningEffort.XHigh, "openai", "gpt-5.2");
 
         await Assert.That(result.Reasoning).IsNotNull();
-        await Assert.That(result.Reasoning!.Effort).IsEqualTo(MeaiReasoningEffort.ExtraHigh);
+        await Assert.That(result.Reasoning.Effort).IsEqualTo(MeaiReasoningEffort.ExtraHigh);
     }
 
     [Test]
@@ -135,7 +135,7 @@ public class ChatOptionsBuilderTests
         ChatOptions result = Builder.BuildChatOptions(ReasoningEffort.Auto, "openai", "gpt-4o");
 
         await Assert.That(result.Reasoning).IsNotNull();
-        await Assert.That(result.Reasoning!.Effort).IsEqualTo(MeaiReasoningEffort.Low);
+        await Assert.That(result.Reasoning.Effort).IsEqualTo(MeaiReasoningEffort.Low);
     }
 
     // --- OpenAI Chat (Effort type) ---
@@ -147,7 +147,7 @@ public class ChatOptionsBuilderTests
         ChatOptions standard = Builder.BuildChatOptions(ReasoningEffort.High, "openai", "gpt-5");
 
         await Assert.That(adaptive.Reasoning).IsNotNull();
-        await Assert.That(adaptive.Reasoning!.Effort).IsEqualTo(standard.Reasoning!.Effort);
+        await Assert.That(adaptive.Reasoning.Effort).IsEqualTo(standard.Reasoning?.Effort);
     }
 
     [Test]
@@ -174,11 +174,11 @@ public class ChatOptionsBuilderTests
         ChatOptions result = Builder.BuildChatOptions(ReasoningEffort.Low, "anthropic", "claude-opus-4-5");
 
         await Assert.That(result.AdditionalProperties).IsNotNull();
-        await Assert.That(result.AdditionalProperties!.ContainsKey("thinking")).IsTrue();
+        await Assert.That(result.AdditionalProperties.ContainsKey("thinking")).IsTrue();
 
         IDictionary<string, object>? thinking = result.AdditionalProperties["thinking"] as IDictionary<string, object>;
         await Assert.That(thinking).IsNotNull();
-        await Assert.That(thinking!["type"]).IsEqualTo("enabled");
+        await Assert.That(thinking["type"]).IsEqualTo("enabled");
 
         long budgetTokens = (long)thinking["budget_tokens"];
         await Assert.That(budgetTokens).IsGreaterThanOrEqualTo(1024);
@@ -189,8 +189,8 @@ public class ChatOptionsBuilderTests
     {
         ChatOptions result = Builder.BuildChatOptions(ReasoningEffort.High, "anthropic", "claude-haiku-4-5");
 
-        IDictionary<string, object>? thinking = result.AdditionalProperties!["thinking"] as IDictionary<string, object>;
-        long budgetTokens = (long)thinking!["budget_tokens"];
+        IDictionary<string, object>? thinking = result.AdditionalProperties["thinking"] as IDictionary<string, object>;
+        long budgetTokens = (long)thinking["budget_tokens"];
 
         await Assert.That(budgetTokens).IsEqualTo(12000);
     }
@@ -201,7 +201,7 @@ public class ChatOptionsBuilderTests
         ChatOptions options = new ChatOptions { MaxOutputTokens = 3000 };
         ChatOptions result = Builder.BuildChatOptions(options, ReasoningEffort.Low, "anthropic", "claude-opus-4-5");
 
-        IDictionary<string, object>? thinking = result.AdditionalProperties!["thinking"] as IDictionary<string, object>;
+        IDictionary<string, object>? thinking = result.AdditionalProperties["thinking"] as IDictionary<string, object>;
         long budgetTokens = (long)thinking!["budget_tokens"];
         await Assert.That(budgetTokens).IsEqualTo(1024);
     }
@@ -214,7 +214,7 @@ public class ChatOptionsBuilderTests
         ChatOptions result = Builder.BuildChatOptions(ReasoningEffort.Low, "anthropic", "claude-sonnet-4.6");
 
         await Assert.That(result.AdditionalProperties).IsNotNull();
-        await Assert.That(result.AdditionalProperties!.ContainsKey("reasoning_effort")).IsTrue();
+        await Assert.That(result.AdditionalProperties.ContainsKey("reasoning_effort")).IsTrue();
         await Assert.That(result.AdditionalProperties["reasoning_effort"]).IsEqualTo("low");
     }
 
@@ -231,7 +231,7 @@ public class ChatOptionsBuilderTests
     {
         ChatOptions result = Builder.BuildChatOptions(ReasoningEffort.XHigh, "anthropic", "claude-sonnet-5");
 
-        await Assert.That(result.AdditionalProperties!["reasoning_effort"]).IsEqualTo("xhigh");
+        await Assert.That(result.AdditionalProperties["reasoning_effort"]).IsEqualTo("xhigh");
     }
 
     // --- Anthropic Effort dispatch (compatible models) ---
@@ -242,7 +242,7 @@ public class ChatOptionsBuilderTests
         ChatOptions result = Builder.BuildChatOptions(ReasoningEffort.Medium, "anthropic", "claude-unknown-model");
 
         await Assert.That(result.AdditionalProperties).IsNotNull();
-        await Assert.That(result.AdditionalProperties!.ContainsKey("reasoning_effort")).IsTrue();
+        await Assert.That(result.AdditionalProperties.ContainsKey("reasoning_effort")).IsTrue();
         await Assert.That(result.AdditionalProperties["reasoning_effort"]).IsEqualTo("medium");
     }
 
@@ -262,8 +262,8 @@ public class ChatOptionsBuilderTests
         ChatOptions result = Builder.BuildChatOptions(ReasoningEffort.On, "ollama", "qwen3");
 
         await Assert.That(result.AdditionalProperties).IsNotNull();
-        IDictionary<string, object>? kwargs = result.AdditionalProperties!["chat_template_kwargs"] as IDictionary<string, object>;
-        await Assert.That((bool)kwargs!["enable_thinking"]).IsTrue();
+        IDictionary<string, object>? kwargs = result.AdditionalProperties["chat_template_kwargs"] as IDictionary<string, object>;
+        await Assert.That((bool)kwargs["enable_thinking"]).IsTrue();
     }
 
     [Test]
@@ -271,8 +271,8 @@ public class ChatOptionsBuilderTests
     {
         ChatOptions result = Builder.BuildChatOptions(ReasoningEffort.Off, "ollama", "qwen3");
 
-        IDictionary<string, object>? kwargs = result.AdditionalProperties!["chat_template_kwargs"] as IDictionary<string, object>;
-        await Assert.That((bool)kwargs!["enable_thinking"]).IsFalse();
+        IDictionary<string, object>? kwargs = result.AdditionalProperties["chat_template_kwargs"] as IDictionary<string, object>;
+        await Assert.That((bool)kwargs["enable_thinking"]).IsFalse();
     }
 
     // --- MiniMax Toggle dispatch ---
@@ -291,7 +291,7 @@ public class ChatOptionsBuilderTests
     {
         ChatOptions result = Builder.BuildChatOptions(ReasoningEffort.Off, "minimax", "minimax-m3");
 
-        await Assert.That(result.AdditionalProperties!["thinking"]).IsEqualTo("disabled");
+        await Assert.That(result.AdditionalProperties["thinking"]).IsEqualTo("disabled");
     }
 
     [Test]
@@ -299,7 +299,7 @@ public class ChatOptionsBuilderTests
     {
         ChatOptions result = Builder.BuildChatOptions(ReasoningEffort.Auto, "minimax", "minimax-m3");
 
-        await Assert.That(result.AdditionalProperties!["thinking"]).IsEqualTo("adaptive");
+        await Assert.That(result.AdditionalProperties["thinking"]).IsEqualTo("adaptive");
     }
 
     // --- Deepseek V3 Toggle dispatch ---
@@ -311,7 +311,7 @@ public class ChatOptionsBuilderTests
 
         await Assert.That(result.Reasoning).IsNull();
         await Assert.That(result.AdditionalProperties).IsNotNull();
-        await Assert.That(result.AdditionalProperties!["thinking"]).IsEqualTo("disabled");
+        await Assert.That(result.AdditionalProperties["thinking"]).IsEqualTo("disabled");
     }
 
     // --- Deepseek V3.1 Effort dispatch ---
@@ -322,7 +322,7 @@ public class ChatOptionsBuilderTests
         ChatOptions result = Builder.BuildChatOptions(ReasoningEffort.On, "deepseek", "deepseek-v3.1");
 
         await Assert.That(result.Reasoning).IsNotNull();
-        await Assert.That(result.Reasoning!.Effort).IsEqualTo(MeaiReasoningEffort.Low);
+        await Assert.That(result.Reasoning.Effort).IsEqualTo(MeaiReasoningEffort.Low);
     }
 
     [Test]

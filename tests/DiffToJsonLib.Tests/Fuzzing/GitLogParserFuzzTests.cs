@@ -18,7 +18,7 @@ public class GitLogParserFuzzTests
 
             foreach (RawCommit commit in commits)
             {
-                if (commit.Message == null || commit.Diff == null) return false;
+                if (string.IsNullOrEmpty(commit.Message) || string.IsNullOrEmpty(commit.Diff)) return false;
             }
             return true;
         }).Check(Config.Default.WithMaxTest(100));
@@ -43,7 +43,7 @@ index 1234567..abcdef0 100644
         GitLogParser parser = new GitLogParser();
         using StringReader reader = new StringReader(diffInput);
 
-        List<RawCommit> commits = await parser.ParseAsync(reader, default).ToListAsync();
+        List<RawCommit> commits = await parser.ParseAsync(reader, CancellationToken.None).ToListAsync();
 
         await Assert.That(commits).Count().IsEqualTo(1);
         await Assert.That(commits[0].Message).IsNotEmpty();

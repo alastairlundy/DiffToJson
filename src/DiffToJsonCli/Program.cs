@@ -262,7 +262,9 @@ rootCommand.SetAction(async (result, invocationToken) =>
         endpoint.EffectiveValue,
         model.EffectiveValue));
 
+#pragma warning disable MA0004
     await using ServiceProvider serviceProvider = services.BuildServiceProvider();
+#pragma warning restore MA0004
     IExtractionRunPipeline pipeline = serviceProvider.GetRequiredService<IExtractionRunPipeline>();
 
     // Ctrl+C handling is owned by System.CommandLine: invocationToken is already
