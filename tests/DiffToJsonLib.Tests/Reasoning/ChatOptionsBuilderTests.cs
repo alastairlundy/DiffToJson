@@ -122,20 +122,21 @@ public class ChatOptionsBuilderTests
     }
 
     [Test]
-    public async Task OpenAi_Off_ClearsReasoning()
+    public async Task OpenAi_Off_SetsEffortNone()
     {
         ChatOptions result = Builder.BuildChatOptions(ReasoningEffort.Off, "openai", "gpt-4o");
 
-        await Assert.That(result.Reasoning).IsNull();
+        await Assert.That(result.Reasoning).IsNotNull();
+        await Assert.That(result.Reasoning.Effort).IsEqualTo(MeaiReasoningEffort.None);
     }
 
     [Test]
-    public async Task OpenAi_Auto_SetsLow()
+    public async Task OpenAi_Auto_SetsMedium()
     {
         ChatOptions result = Builder.BuildChatOptions(ReasoningEffort.Auto, "openai", "gpt-4o");
 
         await Assert.That(result.Reasoning).IsNotNull();
-        await Assert.That(result.Reasoning.Effort).IsEqualTo(MeaiReasoningEffort.Low);
+        await Assert.That(result.Reasoning.Effort).IsEqualTo(MeaiReasoningEffort.Medium);
     }
 
     // --- OpenAI Chat (Effort type) ---
@@ -151,11 +152,12 @@ public class ChatOptionsBuilderTests
     }
 
     [Test]
-    public async Task OpenAiChat_Off_ClearsReasoning()
+    public async Task OpenAiChat_Off_SetsEffortNone()
     {
         ChatOptions result = Builder.BuildChatOptions(ReasoningEffort.Off, "openai", "gpt-5-chat");
 
-        await Assert.That(result.Reasoning).IsNull();
+        await Assert.That(result.Reasoning).IsNotNull();
+        await Assert.That(result.Reasoning.Effort).IsEqualTo(MeaiReasoningEffort.None);
     }
 
     // --- Anthropic BudgetTokens dispatch (old models) ---
@@ -219,11 +221,13 @@ public class ChatOptionsBuilderTests
     }
 
     [Test]
-    public async Task AnthropicEffort_Off_OmitsReasoningEffort()
+    public async Task AnthropicEffort_Off_SetsOffReasoningEffort()
     {
         ChatOptions result = Builder.BuildChatOptions(ReasoningEffort.Off, "anthropic", "claude-opus-4.6");
 
-        await Assert.That(result.AdditionalProperties).IsNull();
+        await Assert.That(result.AdditionalProperties).IsNotNull();
+        await Assert.That(result.AdditionalProperties.ContainsKey("reasoning_effort")).IsTrue();
+        await Assert.That(result.AdditionalProperties["reasoning_effort"]).IsEqualTo("off");
     }
 
     [Test]
@@ -247,11 +251,13 @@ public class ChatOptionsBuilderTests
     }
 
     [Test]
-    public async Task AnthropicEffort_Compat_Off_OmitsReasoningEffort()
+    public async Task AnthropicEffort_Compat_Off_SetsOffReasoningEffort()
     {
         ChatOptions result = Builder.BuildChatOptions(ReasoningEffort.Off, "anthropic", "claude-unknown-model");
 
-        await Assert.That(result.AdditionalProperties).IsNull();
+        await Assert.That(result.AdditionalProperties).IsNotNull();
+        await Assert.That(result.AdditionalProperties.ContainsKey("reasoning_effort")).IsTrue();
+        await Assert.That(result.AdditionalProperties["reasoning_effort"]).IsEqualTo("off");
     }
 
     // --- Qwen3 Toggle dispatch ---
@@ -322,15 +328,16 @@ public class ChatOptionsBuilderTests
         ChatOptions result = Builder.BuildChatOptions(ReasoningEffort.On, "deepseek", "deepseek-v3.1");
 
         await Assert.That(result.Reasoning).IsNotNull();
-        await Assert.That(result.Reasoning.Effort).IsEqualTo(MeaiReasoningEffort.Low);
+        await Assert.That(result.Reasoning.Effort).IsEqualTo(MeaiReasoningEffort.Medium);
     }
 
     [Test]
-    public async Task DeepseekV31_Off_ClearsReasoning()
+    public async Task DeepseekV31_Off_SetsEffortNone()
     {
         ChatOptions result = Builder.BuildChatOptions(ReasoningEffort.Off, "deepseek", "deepseek-v3.1");
 
-        await Assert.That(result.Reasoning).IsNull();
+        await Assert.That(result.Reasoning).IsNotNull();
+        await Assert.That(result.Reasoning.Effort).IsEqualTo(MeaiReasoningEffort.None);
     }
 
     // --- Deepseek V4 Effort dispatch ---
