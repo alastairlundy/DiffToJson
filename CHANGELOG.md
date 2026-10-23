@@ -14,6 +14,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - `README.md` reasoning effort section rewritten to describe catalog-derived, option-type-driven validation instead of the old hardcoded per-model family lists.
+- Reasoning effort wire mapping for Effort-type models is now documented and covered by tests: on OpenAI-style providers `auto`/`on` map to `medium` and `off` sends an explicit `none`; on Anthropic Effort models `auto`/`on` omit the property and `off` sends `reasoning_effort: off`.
+
+### Fixed
+
+- Prompt placeholder validation no longer rejects every built-in preset. `RegexOptions.ExplicitCapture` had made the regex's unnamed capture group non-capturing, so extracted placeholder names were always empty (`unknown placeholder '{}'`), the `PromptPresets` type initializer threw, and any code path touching prompt presets failed with `TypeInitializationException`. The pattern now uses a named capture group.
+
 
 ## [0.7.0] - 2026-10-15
 

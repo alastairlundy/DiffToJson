@@ -277,7 +277,9 @@ Two deliberate exceptions never produce reasoning on `auto` even when the catalo
 
 When capability data is unavailable (offline, models.dev unreachable), the CLI prints a one-line warning on stderr and falls back to accepting `auto` only; runs are never blocked.
 
-If the value is invalid or unsupported for the given `--model-id`, the CLI exits with an error listing the supported values (see [Cross-Option Rules](#cross-option-rules)). `auto` leaves the default behavior (including default `MaxOutputTokens` of 16,000 when the model produces reasoning on `auto`, else 8,000).
+If the value is invalid or unsupported for the given `--model-id`, the CLI exits with an error listing the supported values (see [Cross-Option Rules](#cross-option-rules)). `auto` keeps the default `MaxOutputTokens` behavior (16,000 when the model produces reasoning on `auto`, else 8,000).
+
+For **Effort**-type models the selected value is translated to each provider's wire format: on OpenAI-style providers `auto`/`on` are sent as `medium` and `off` is sent as an explicit `none`, while `low`, `medium` and `high` pass through and `xhigh`/`max` are sent as `extraHigh`. On Anthropic Effort models `auto`/`on` omit the property so the provider default applies, `off` is sent as `reasoning_effort: off`, and `low` through `max` (including `xhigh`) pass through verbatim.
 
 ## How to Build
 
