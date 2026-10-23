@@ -15,15 +15,11 @@
  */
 
 using System.CommandLine;
-using System.IO.Abstractions;
 using CliInvoke.Extensions;
 using DiffToJsonCli;
 using DiffToJsonCli.Execution;
-using DiffToJsonLib.Training;
 using DiffToJsonLib.Training.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
-using DiffToJsonLib.Reasoning;
-using DiffToJsonLib.Writers;
 using Microsoft.Extensions.Compliance.Redaction;
 
 IServiceCollection services = new ServiceCollection();
