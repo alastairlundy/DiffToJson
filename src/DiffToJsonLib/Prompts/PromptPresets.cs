@@ -98,7 +98,7 @@ public static partial class PromptPresets
             MatchCollection matches = regex.Matches(field);
             foreach (Match match in matches)
             {
-                string name = match.Groups[1].Value;
+                string name = match.Groups["name"].Value;
                 if (!_knownPlaceholders.Contains(name))
                 {
                     throw new PromptTemplateValidationException(
@@ -109,6 +109,6 @@ public static partial class PromptPresets
         }
     }
 
-    [GeneratedRegex(@"\{(\w+)\}", RegexOptions.IgnoreCase | RegexOptions.ExplicitCapture, 3000)]
+    [GeneratedRegex(@"\{(?<name>\w+)\}", RegexOptions.IgnoreCase | RegexOptions.ExplicitCapture, 3000)]
     private static partial Regex PlaceholderPattern { get; }
 }
