@@ -1,6 +1,4 @@
-﻿// Global using directives
-
-global using System.IO.Abstractions;
+﻿global using System.IO.Abstractions;
 global using DiffToJsonLib;
 global using DiffToJsonLib.Abstractions;
 global using DiffToJsonLib.Models;

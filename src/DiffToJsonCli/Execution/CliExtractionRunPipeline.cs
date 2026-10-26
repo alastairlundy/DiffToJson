@@ -42,7 +42,6 @@ public sealed class CliExtractionRunPipeline : IExtractionRunPipeline
     /// <summary>
     /// Creates a pipeline from the existing abstractions. File discovery travels through
     /// the injected <see cref="IFileSystem"/> seam rather than static System.IO calls.
-    /// Nine constructor parameters accepted.
     /// </summary>
     public CliExtractionRunPipeline(
         IFileSystem fileSystem,

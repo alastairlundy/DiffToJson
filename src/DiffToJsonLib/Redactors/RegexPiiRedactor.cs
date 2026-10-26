@@ -42,9 +42,7 @@ public partial class RegexPiiRedactor : Redactor
 
     public override int GetRedactedLength(ReadOnlySpan<char> source)
     {
-        // For simplicity, we assume "REDACTED" is used as the replacement.
-        // Since the regex match length varies, this is a heuristic.
-        // In a real production scenario, we'd calculate based on the match.
+        // Heuristic: the fixed "REDACTED" replacement length; actual match length varies.
         return "REDACTED".Length;
     }
 

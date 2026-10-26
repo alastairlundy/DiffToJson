@@ -33,12 +33,9 @@ public class AILicenseAnalyzer : ILicenseAnalyzer
     }
 
     /// <summary>
-    /// 
+    /// Sends the license file's text to the configured chat client and returns the
+    /// trimmed licence name, or null when the model returns an empty response.
     /// </summary>
-    /// <param name="licenseFile"></param>
-    /// <returns></returns>
-    /// <exception cref="FileNotFoundException"></exception>
-    /// <exception cref="NullReferenceException"></exception>
     public async Task<string?> AnalyzeLicenseAsync(IFileInfo licenseFile)
     {
         if(!licenseFile.Exists)

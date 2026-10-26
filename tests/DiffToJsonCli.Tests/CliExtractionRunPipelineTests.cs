@@ -1280,9 +1280,7 @@ public sealed class CliExtractionRunPipelineTests
         {
             await File.WriteAllTextAsync(Path.Combine(tempDir, "LICENSE.txt"), "license text");
 
-            // License auto-detection is available (file present, endpoint/model set), so
-            // before validation was reordered this input paid for an analyzer call
-            // before failing on the bad placeholder.
+            // Auto-detection is available, so template validation must fail before any analyzer call.
             RunTrainingInput input = ValidTrainingInput(
                 tempDir,
                 license: "",

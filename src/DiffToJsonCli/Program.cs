@@ -207,8 +207,8 @@ rootCommand.SetAction(async (result, invocationToken) =>
     string endpointOptionValue = result.GetValue(endpointUrlOption) ?? "";
     string modelOptionValue = result.GetValue(modelIdOption) ?? "";
 
-    // Build the pipeline input with raw halves. The pipeline applies
-    // option-wins-over-environment itself before validation and dispatch.
+    // Raw halves only: the pipeline owns option-wins-over-environment fallback and
+    // validation, and re-resolves these values for the per-run chat factory seam below.
     RawValue provider = RawValue.From(providerOptionValue, Environment.GetEnvironmentVariable("DIFFTOJSON_PROVIDER") ?? "");
     RawValue credential = RawValue.From(apiKeyOptionValue, Environment.GetEnvironmentVariable("DIFFTOJSON_API_KEY") ?? "");
     RawValue endpoint = RawValue.From(endpointOptionValue, Environment.GetEnvironmentVariable("DIFFTOJSON_ENDPOINT") ?? "");
@@ -216,8 +216,6 @@ rootCommand.SetAction(async (result, invocationToken) =>
 
     bool isRaw = string.Equals(format, "raw", StringComparison.OrdinalIgnoreCase);
 
-    // Per-run chat credentials for the injected seams. Validation and
-    // fallback authority stays in the pipeline, which re-resolves from the raw input.
     services.AddSingleton<IChatClientFactory>(_ => new ChatClientFactory(
         provider.EffectiveValue,
         credential.EffectiveValue,
