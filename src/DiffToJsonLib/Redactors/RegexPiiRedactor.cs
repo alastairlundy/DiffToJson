@@ -19,7 +19,7 @@ using Microsoft.Extensions.Compliance.Redaction;
 
 namespace DiffToJsonLib.Redactors;
 
-public partial class RegexPiiRedactor : Redactor
+public sealed partial class RegexPiiRedactor : Redactor
 {
     private readonly Regex _regex;
 
@@ -29,7 +29,7 @@ public partial class RegexPiiRedactor : Redactor
     }
 
     [GeneratedRegex(@"<([^>\s]+@[^>\s]+\.[^>\s]+)>|\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b",
-        RegexOptions.Compiled | RegexOptions.ExplicitCapture, 3000)]
+        RegexOptions.ExplicitCapture, 3000)]
     private static partial Regex MyRegex { get; }
 
     public override string Redact(string? source)
@@ -48,8 +48,32 @@ public partial class RegexPiiRedactor : Redactor
 
     public override int Redact(ReadOnlySpan<char> source, Span<char> destination)
     {
-        string redacted = Redact(source.ToString());
-        redacted.AsSpan().CopyTo(destination);
-        return redacted.Length;
+        ReadOnlySpan<char> replacement = "REDACTED";
+        int written = 0;
+        int sourceStart = 0;
+
+        // Enumerate matches straight over the source span (amortized allocation free) and write the
+        // redacted output directly into the destination buffer, replacing every match with "REDACTED"
+        // exactly as the string-based overload does.
+        foreach (ValueMatch match in _regex.EnumerateMatches(source))
+        {
+            written = Append(source.Slice(sourceStart, match.Index - sourceStart), destination, written);
+            written = Append(replacement, destination, written);
+            sourceStart = match.Index + match.Length;
+        }
+
+        return Append(source.Slice(sourceStart), destination, written);
+
+        static int Append(ReadOnlySpan<char> value, Span<char> target, int charsWritten)
+        {
+            if (value.Length > target.Length - charsWritten)
+            {
+                // The Redactor contract documents ArgumentException when destination is too small.
+                throw new ArgumentException("Destination is too short.", nameof(destination));
+            }
+
+            value.CopyTo(target.Slice(charsWritten));
+            return charsWritten + value.Length;
+        }
     }
 }
