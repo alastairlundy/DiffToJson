@@ -20,7 +20,7 @@ using DiffToJsonLib.Parsing;
 
 namespace DiffToJsonLib;
 
-public class GitCommitParser : IGitCommitParser
+public sealed class GitCommitParser : IGitCommitParser
 {
     private readonly IProcessInvoker _processInvoker;
 
