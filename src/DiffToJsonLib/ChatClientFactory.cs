@@ -24,7 +24,7 @@ using OpenAI;
 
 namespace DiffToJsonLib;
 
-public class ChatClientFactory : IChatClientFactory
+public sealed class ChatClientFactory : IChatClientFactory
 {
     private readonly string _provider;
     private readonly string _apiKey;
@@ -63,7 +63,9 @@ public class ChatClientFactory : IChatClientFactory
         if (string.IsNullOrEmpty(_provider))
             ArgumentException.ThrowIfNullOrEmpty(_apiKey);
 
-        switch (_provider.ToLower(System.Globalization.CultureInfo.CurrentCulture))
+        // ToLowerInvariant preserves the original case-insensitive matching semantics while
+        // removing the culture-sensitivity bug (e.g. Turkish dotted-I lowercasing of "I").
+        switch (_provider.ToLowerInvariant())
         {
             case "anthropic-compatible":
             {
