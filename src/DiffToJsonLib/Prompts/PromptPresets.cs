@@ -14,6 +14,7 @@
    limitations under the License.
  */
 
+using System.Collections.Frozen;
 using System.Text.RegularExpressions;
 
 namespace DiffToJsonLib.Prompts;
@@ -39,20 +40,20 @@ public static partial class PromptPresets
         "Write a Conventional Commits-style commit message for the diff in '{repoName}': " + Environment.NewLine + "{diff}"
     );
 
-    private static readonly Dictionary<string, PromptTemplate> _presets = new(StringComparer.OrdinalIgnoreCase)
+    private static readonly FrozenDictionary<string, PromptTemplate> _presets = new Dictionary<string, PromptTemplate>(StringComparer.OrdinalIgnoreCase)
     {
         ["default"] = Default,
         ["conventional"] = Conventional,
-    };
+    }.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
 
-    private static readonly HashSet<string> _knownPlaceholders = new(StringComparer.OrdinalIgnoreCase)
+    private static readonly FrozenSet<string> _knownPlaceholders = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
         "diff",
         "commitMessage",
         "repoName",
         "license",
         "repoUrl"
-    };
+    }.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
 
     static PromptPresets()
     {

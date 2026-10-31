@@ -14,17 +14,94 @@
    limitations under the License.
  */
 
+using System.Text.RegularExpressions;
+
 namespace DiffToJsonLib.Training;
 
-public static class PromptSubstitutor
+public static partial class PromptSubstitutor
 {
     public static string Substitute(string template, string diff, string commitMessage, string repoName, string license, string repoUrl)
     {
-        return template
-            .Replace("{diff}", diff, StringComparison.OrdinalIgnoreCase)
-            .Replace("{commitMessage}", commitMessage, StringComparison.OrdinalIgnoreCase)
-            .Replace("{repoName}", repoName, StringComparison.OrdinalIgnoreCase)
-            .Replace("{license}", license, StringComparison.OrdinalIgnoreCase)
-            .Replace("{repoUrl}", repoUrl, StringComparison.OrdinalIgnoreCase);
+        ArgumentNullException.ThrowIfNull(template);
+
+        StringBuilder? builder = null;
+        int lastCopiedIndex = 0;
+
+        foreach (ValueMatch match in PlaceholderPattern.EnumerateMatches(template))
+        {
+            if (!TryResolveReplacement(
+                    template.AsSpan(match.Index + 1, match.Length - 2),
+                    diff,
+                    commitMessage,
+                    repoName,
+                    license,
+                    repoUrl,
+                    out string? replacement))
+            {
+                // Unknown placeholders are left untouched; their text is copied verbatim below.
+                continue;
+            }
+
+            builder ??= new StringBuilder(template.Length + 64);
+
+            builder.Append(template, lastCopiedIndex, match.Index - lastCopiedIndex);
+            builder.Append(replacement);
+            lastCopiedIndex = match.Index + match.Length;
+        }
+
+        if (builder is null)
+        {
+            // No known placeholder was substituted; return the template unchanged without allocating.
+            return template;
+        }
+
+        builder.Append(template, lastCopiedIndex, template.Length - lastCopiedIndex);
+        return builder.ToString();
     }
+
+    private static bool TryResolveReplacement(
+        ReadOnlySpan<char> name,
+        string diff,
+        string commitMessage,
+        string repoName,
+        string license,
+        string repoUrl,
+        out string? replacement)
+    {
+        if (name.Equals("diff", StringComparison.OrdinalIgnoreCase))
+        {
+            replacement = diff;
+            return true;
+        }
+
+        if (name.Equals("commitMessage", StringComparison.OrdinalIgnoreCase))
+        {
+            replacement = commitMessage;
+            return true;
+        }
+
+        if (name.Equals("repoName", StringComparison.OrdinalIgnoreCase))
+        {
+            replacement = repoName;
+            return true;
+        }
+
+        if (name.Equals("license", StringComparison.OrdinalIgnoreCase))
+        {
+            replacement = license;
+            return true;
+        }
+
+        if (name.Equals("repoUrl", StringComparison.OrdinalIgnoreCase))
+        {
+            replacement = repoUrl;
+            return true;
+        }
+
+        replacement = null;
+        return false;
+    }
+
+    [GeneratedRegex(@"\{(?<name>\w+)\}", RegexOptions.ExplicitCapture, 3000)]
+    private static partial Regex PlaceholderPattern { get; }
 }

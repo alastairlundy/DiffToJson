@@ -19,6 +19,20 @@ public class PromptSubstitutorTests
     }
 
     [Test]
+    public async Task Placeholders_AreMatchedCaseInsensitively()
+    {
+        string result = PromptSubstitutor.Substitute(
+            "{DIFF} / {CommitMessage} / {REPONAME}",
+            "the diff",
+            "the commit message",
+            "my/repo",
+            "MIT",
+            "https://github.com/my/repo");
+
+        await Assert.That(result).IsEqualTo("the diff / the commit message / my/repo");
+    }
+
+    [Test]
     public async Task MissingPlaceholders_AreLeftAsIs()
     {
         string result = PromptSubstitutor.Substitute(
