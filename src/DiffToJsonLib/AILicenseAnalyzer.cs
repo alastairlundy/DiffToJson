@@ -19,7 +19,7 @@ using Microsoft.Extensions.AI;
 
 namespace DiffToJsonLib;
 
-public class AILicenseAnalyzer : ILicenseAnalyzer
+public sealed class AILicenseAnalyzer : ILicenseAnalyzer
 {
     private readonly Lazy<IChatClient> _clientLazy;
     private readonly IFileSystem _fileSystem;

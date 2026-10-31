@@ -15,12 +15,15 @@
  */
 
 using System.IO.Abstractions;
+using System.Text;
 using System.Text.Json;
 
 namespace DiffToJsonLib.Writers;
 
-public class DiffJsonFileWriter : IDiffJsonFileWriter
+public sealed class DiffJsonFileWriter : IDiffJsonFileWriter
 {
+    private static readonly ReadOnlyMemory<byte> NewLineUtf8 = Encoding.UTF8.GetBytes(Environment.NewLine);
+
     private readonly IFileSystem _fileSystem;
 
     public DiffJsonFileWriter(IFileSystem fileSystem)
@@ -38,9 +41,8 @@ public class DiffJsonFileWriter : IDiffJsonFileWriter
         {
             await foreach (CommitRecord record in commits.WithCancellation(cancellationToken).ConfigureAwait(false))
             {
-                string json = JsonSerializer.Serialize(record, CommitJsonContext.Default.CommitRecord);
-
-                await streamWriter.WriteLineAsync(json).ConfigureAwait(false);
+                await JsonSerializer.SerializeAsync(streamWriter.BaseStream, record, CommitJsonContext.Default.CommitRecord, cancellationToken).ConfigureAwait(false);
+                await streamWriter.BaseStream.WriteAsync(NewLineUtf8, cancellationToken).ConfigureAwait(false);
             }
         
             streamWriter.Close();
@@ -56,9 +58,8 @@ public class DiffJsonFileWriter : IDiffJsonFileWriter
         {
             foreach (CommitRecord record in commits)
             {
-                string json = JsonSerializer.Serialize(record, CommitJsonContext.Default.CommitRecord);
-
-                await streamWriter.WriteLineAsync(json).ConfigureAwait(false);
+                await JsonSerializer.SerializeAsync(streamWriter.BaseStream, record, CommitJsonContext.Default.CommitRecord, cancellationToken).ConfigureAwait(false);
+                await streamWriter.BaseStream.WriteAsync(NewLineUtf8, cancellationToken).ConfigureAwait(false);
             }
         
             streamWriter.Close();

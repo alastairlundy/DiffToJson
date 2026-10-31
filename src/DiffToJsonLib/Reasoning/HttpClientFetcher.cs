@@ -30,7 +30,7 @@ internal sealed class HttpClientFetcher : IFetcher
 
     public async Task<byte[]> FetchApiJsonAsync(CancellationToken cancellationToken = default)
     {
-        using HttpResponseMessage response = await SharedHttpClient.GetAsync(ApiUrl, cancellationToken).ConfigureAwait(false);
+        using HttpResponseMessage response = await SharedHttpClient.GetAsync(ApiUrl, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadAsByteArrayAsync(cancellationToken).ConfigureAwait(false);
     }

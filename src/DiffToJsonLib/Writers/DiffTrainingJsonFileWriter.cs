@@ -15,12 +15,15 @@
  */
 
 using System.IO.Abstractions;
+using System.Text;
 using System.Text.Json;
 
 namespace DiffToJsonLib.Writers;
 
-public class DiffTrainingJsonFileWriter : IDiffTrainingJsonFileWriter
+public sealed class DiffTrainingJsonFileWriter : IDiffTrainingJsonFileWriter
 {
+    private static readonly ReadOnlyMemory<byte> NewLineUtf8 = Encoding.UTF8.GetBytes(Environment.NewLine);
+
     private readonly IFileSystem _fileSystem;
 
     public DiffTrainingJsonFileWriter(IFileSystem fileSystem)
@@ -39,9 +42,8 @@ public class DiffTrainingJsonFileWriter : IDiffTrainingJsonFileWriter
         {
             await foreach (CommitTrainingRecord record in records.WithCancellation(cancellationToken).ConfigureAwait(false))
             {
-                string json = JsonSerializer.Serialize(record, CommitTrainingJsonContext.Default.CommitTrainingRecord);
-
-                await streamWriter.WriteLineAsync(json).ConfigureAwait(false);
+                await JsonSerializer.SerializeAsync(streamWriter.BaseStream, record, CommitTrainingJsonContext.Default.CommitTrainingRecord, cancellationToken).ConfigureAwait(false);
+                await streamWriter.BaseStream.WriteAsync(NewLineUtf8, cancellationToken).ConfigureAwait(false);
             }
 
             streamWriter.Close();

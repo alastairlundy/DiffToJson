@@ -14,11 +14,13 @@
    limitations under the License.
  */
 
+using System.Collections.Frozen;
+
 namespace DiffToJsonLib.Reasoning;
 
 internal static class ModelsDevProviderMap
 {
-    private static readonly IReadOnlyDictionary<string, string> ProviderMap =
+    private static readonly FrozenDictionary<string, string> ProviderMap =
         new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
             ["openai"] = "openai",
@@ -30,7 +32,7 @@ internal static class ModelsDevProviderMap
             ["ollama-cloud"] = "ollama-cloud",
             ["minimax"] = "minimax",
             ["deepseek"] = "deepseek",
-        };
+        }.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
 
     public static bool TryGetProviderId(string cliProviderName, out string? modelsDevProviderId)
     {

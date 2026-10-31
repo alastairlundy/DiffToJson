@@ -21,7 +21,7 @@ using Microsoft.Extensions.AI;
 
 namespace DiffToJsonLib.Writers;
 
-public class LlmAssistantWriter : IAssistantMessageGenerator
+public sealed class LlmAssistantWriter : IAssistantMessageGenerator
 {
     private readonly Lazy<IChatClient> _clientLazy;
     private readonly RedactionPolicy _policy;
