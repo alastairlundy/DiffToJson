@@ -31,16 +31,24 @@ public class GitLogParser
 
         while (await reader.ReadLineAsync(ct).ConfigureAwait(false) is { } line)
         {
-            line = line.Replace("\r\n", "\n", StringComparison.OrdinalIgnoreCase).Replace('\r', '\n');
+            if (line.Contains('\r'))
+            {
+                line = line.Replace("\r\n", "\n").Replace('\r', '\n');
+            }
 
             if (line.StartsWith("commit ", StringComparison.OrdinalIgnoreCase))
             {
-                if (messageBuilder.Length > 0 && !string.IsNullOrWhiteSpace(diffBuilder.ToString()))
+                if (messageBuilder.Length > 0)
                 {
-                    yield return new RawCommit(
-                        messageBuilder.ToString().TrimStart().TrimEnd(),
-                        diffBuilder.ToString().TrimStart().TrimEnd()
-                    );
+                    string diff = diffBuilder.ToString();
+
+                    if (!string.IsNullOrWhiteSpace(diff))
+                    {
+                        yield return new RawCommit(
+                            messageBuilder.ToString().Trim(),
+                            diff.Trim()
+                        );
+                    }
                 }
 
                 messageBuilder.Clear();
@@ -77,12 +85,17 @@ public class GitLogParser
             }
         }
 
-        if (messageBuilder.Length > 0 && !string.IsNullOrWhiteSpace(diffBuilder.ToString()))
+        if (messageBuilder.Length > 0)
         {
-            yield return new RawCommit(
-                messageBuilder.ToString().TrimStart().TrimEnd(),
-                diffBuilder.ToString().TrimStart().TrimEnd()
-            );
+            string diff = diffBuilder.ToString();
+
+            if (!string.IsNullOrWhiteSpace(diff))
+            {
+                yield return new RawCommit(
+                    messageBuilder.ToString().Trim(),
+                    diff.Trim()
+                );
+            }
         }
     }
 }
