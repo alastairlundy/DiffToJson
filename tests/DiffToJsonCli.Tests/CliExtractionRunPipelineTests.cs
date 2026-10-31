@@ -94,6 +94,14 @@ public sealed class CliExtractionRunPipelineTests
             return Supported;
         }
 
+        public Task<IReadOnlySet<ReasoningEffort>> GetSupportedReasoningValuesAsync(
+            string model, CancellationToken cancellationToken = default)
+        {
+            // Delegates to the sync member so CallCount/CapturedModel assertions
+            // keep working for both query paths.
+            return Task.FromResult(GetSupportedReasoningValues(model));
+        }
+
         public bool ProducesReasoningOnAuto(string model) => false;
 
         public AIModelReasoningOptionType? GetReasoningType(string model, string provider) => null;

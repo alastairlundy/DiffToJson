@@ -25,6 +25,14 @@ public interface IReasoningEffortMatrix
     AIModelReasoningOptionType? GetReasoningType(string model, string provider);
 
     /// <summary>
+    /// Async variant of <see cref="GetSupportedReasoningValues(string)"/>: loads the
+    /// capability catalog without blocking, then answers from memory. Prefer this in
+    /// async paths; the synchronous variant never blocks on I/O and falls back to the
+    /// auto-only set until the catalog has been loaded.
+    /// </summary>
+    Task<IReadOnlySet<ReasoningEffort>> GetSupportedReasoningValuesAsync(string model, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Probes the backing capability data source. Implementations without a remote
     /// catalog report <see cref="CacheStatus.Fresh"/>.
     /// </summary>

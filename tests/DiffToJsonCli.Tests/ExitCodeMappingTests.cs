@@ -58,6 +58,10 @@ public sealed class ExitCodeMappingTests
         public IReadOnlySet<ReasoningEffort> GetSupportedReasoningValues(string model) =>
             new HashSet<ReasoningEffort> { ReasoningEffort.Auto };
 
+        public Task<IReadOnlySet<ReasoningEffort>> GetSupportedReasoningValuesAsync(
+            string model, CancellationToken cancellationToken = default) =>
+            Task.FromResult(GetSupportedReasoningValues(model));
+
         public bool ProducesReasoningOnAuto(string model) => false;
 
         public AIModelReasoningOptionType? GetReasoningType(string model, string provider) => null;

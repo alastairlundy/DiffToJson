@@ -1,3 +1,4 @@
+using System.IO.Abstractions.TestingHelpers;
 using DiffToJsonLib.Reasoning;
 using ModelsDotDevSharp;
 using ReasoningEffort = DiffToJsonLib.Reasoning.ReasoningEffort;
@@ -6,6 +7,43 @@ namespace DiffToJsonLib.Tests.Reasoning;
 
 public class ModelsDevReasoningEffortMatrixTests
 {
+    private static readonly string TestCacheDir = Path.Combine(
+        Path.GetTempPath(),
+        "difftojson-tests",
+        Guid.NewGuid().ToString("N"));
+
+    private static string CacheFilePath => Path.Combine(TestCacheDir, "api.json");
+
+    private static string TimestampFilePath => Path.Combine(TestCacheDir, "api-fetched.txt");
+
+    private static byte[] CreateMinimalProviderJson()
+    {
+        string json = """
+        {
+          "test-provider": {
+            "id": "test-provider",
+            "env": ["TEST_API_KEY"],
+            "npm": "@ai-sdk/openai-compatible",
+            "api": "https://api.test.com/v1",
+            "name": "Test Provider",
+            "doc": "https://docs.test.com",
+            "models": {}
+          }
+        }
+        """;
+        return System.Text.Encoding.UTF8.GetBytes(json);
+    }
+
+    private static readonly byte[] FixtureBytes = CreateMinimalProviderJson();
+
+    private sealed class ThrowingFetcher : IFetcher
+    {
+        public Task<byte[]> FetchApiJsonAsync(CancellationToken cancellationToken = default)
+        {
+            throw new HttpRequestException("Network unavailable");
+        }
+    }
+
     private static ModelsDevReasoningEffortMatrix CreateMatrix(AIProviderInfo[] providers)
     {
         return new ModelsDevReasoningEffortMatrix(providers);
@@ -283,5 +321,78 @@ public class ModelsDevReasoningEffortMatrixTests
 
         await Assert.That(result.Count).IsEqualTo(1);
         await Assert.That(result.Contains(ReasoningEffort.Auto)).IsTrue();
+    }
+
+    // --- Async query paths (no sync-over-async) ---
+
+    [Test]
+    public async Task GetSupportedReasoningValuesAsync_MatchesSyncForInMemoryCatalog()
+    {
+        AIModelInfo model = CreateModel("gpt-4o", true, [
+            CreateReasoningOption(AIModelReasoningOptionType.Effort, ["low", "medium", "high"])
+        ]);
+        AIProviderInfo provider = CreateProvider("openai", [model]);
+        ModelsDevReasoningEffortMatrix matrix = CreateMatrix([provider]);
+
+        IReadOnlySet<ReasoningEffort> asyncResult =
+            await matrix.GetSupportedReasoningValuesAsync("gpt-4o", "openai");
+        IReadOnlySet<ReasoningEffort> syncResult = matrix.GetSupportedReasoningValues("gpt-4o", "openai");
+
+        await Assert.That(asyncResult.Count).IsEqualTo(4);
+        await Assert.That(asyncResult.SetEquals(syncResult)).IsTrue();
+    }
+
+    [Test]
+    public async Task CacheBackedMatrix_SyncQueriesBeforeProbe_FallBackToAutoOnlyWithoutBlocking()
+    {
+        // No cache file and a fetcher that always fails: the sync paths must answer
+        // from memory (empty catalog) instead of blocking on cache I/O.
+        MockFileSystem fileSystem = new();
+        CapabilityCache cache = new(fileSystem, TestCacheDir, new ThrowingFetcher());
+        ModelsDevReasoningEffortMatrix matrix = new(cache);
+
+        IReadOnlySet<ReasoningEffort> result = matrix.GetSupportedReasoningValues("gpt-4o", "openai");
+
+        await Assert.That(result.Count).IsEqualTo(1);
+        await Assert.That(result.Contains(ReasoningEffort.Auto)).IsTrue();
+        await Assert.That(matrix.GetReasoningType("gpt-4o", "openai")).IsNull();
+    }
+
+    [Test]
+    public async Task CacheBackedMatrix_AsyncProbe_CapturesStatusForSyncCacheStatus()
+    {
+        MockFileSystem fileSystem = new();
+        fileSystem.Directory.CreateDirectory(TestCacheDir);
+        fileSystem.File.WriteAllBytes(CacheFilePath, FixtureBytes);
+        fileSystem.File.WriteAllText(TimestampFilePath, DateTimeOffset.UtcNow.AddDays(-2).ToString("O"));
+        CapabilityCache cache = new(fileSystem, TestCacheDir, new ThrowingFetcher());
+        ModelsDevReasoningEffortMatrix matrix = new(cache);
+
+        CacheStatus probed = await matrix.GetCacheStatusAsync();
+
+        // The probe fails to refresh but falls back to the stale on-disk copy; the
+        // synchronous property then reports the captured status without re-running I/O.
+        await Assert.That(probed).IsEqualTo(CacheStatus.Stale);
+        await Assert.That(matrix.CacheStatus).IsEqualTo(CacheStatus.Stale);
+    }
+
+    [Test]
+    public async Task CacheBackedMatrix_GetSupportedReasoningValuesAsync_LoadsCatalogFromCache()
+    {
+        MockFileSystem fileSystem = new();
+        fileSystem.Directory.CreateDirectory(TestCacheDir);
+        fileSystem.File.WriteAllBytes(CacheFilePath, FixtureBytes);
+        fileSystem.File.WriteAllText(TimestampFilePath, DateTimeOffset.UtcNow.AddDays(-2).ToString("O"));
+        CapabilityCache cache = new(fileSystem, TestCacheDir, new ThrowingFetcher());
+        ModelsDevReasoningEffortMatrix matrix = new(cache);
+
+        IReadOnlySet<ReasoningEffort> result =
+            await matrix.GetSupportedReasoningValuesAsync("some-model", "test-provider");
+
+        // The fixture catalog loads successfully (stale copy) but its provider has no
+        // models, so the auto-only fallback applies after the async load.
+        await Assert.That(result.Count).IsEqualTo(1);
+        await Assert.That(result.Contains(ReasoningEffort.Auto)).IsTrue();
+        await Assert.That(matrix.CacheStatus).IsEqualTo(CacheStatus.Stale);
     }
 }

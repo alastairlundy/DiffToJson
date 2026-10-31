@@ -196,7 +196,8 @@ public sealed class CliExtractionRunPipeline : IExtractionRunPipeline
 
             if (effort != ReasoningEffort.Auto)
             {
-                IReadOnlySet<ReasoningEffort> supported = _effortMatrix.GetSupportedReasoningValues(model);
+                IReadOnlySet<ReasoningEffort> supported = await _effortMatrix
+                    .GetSupportedReasoningValuesAsync(model, cancellationToken).ConfigureAwait(false);
                 if (!supported.Contains(effort))
                 {
                     string validList = string.Join(", ", supported.Select(v => v.ToString().ToLowerInvariant()));

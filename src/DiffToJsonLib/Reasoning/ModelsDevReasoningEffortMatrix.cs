@@ -14,6 +14,7 @@
    limitations under the License.
  */
 
+using System.Collections.Frozen;
 using ModelsDotDevSharp;
 
 namespace DiffToJsonLib.Reasoning;
@@ -49,8 +50,30 @@ public sealed class ModelsDevReasoningEffortMatrix : IReasoningEffortMatrix
         "deepseek-chat"
     };
 
+    // Allocation-free case-insensitive effort-name lookup; avoids the per-call
+    // ToLowerInvariant switch expression in ParseEffortValue.
+    private static readonly FrozenDictionary<string, ReasoningEffort> EffortNameMap =
+        new Dictionary<string, ReasoningEffort>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["on"] = ReasoningEffort.On,
+            ["off"] = ReasoningEffort.Off,
+            ["low"] = ReasoningEffort.Low,
+            ["medium"] = ReasoningEffort.Medium,
+            ["high"] = ReasoningEffort.High,
+            ["xhigh"] = ReasoningEffort.XHigh,
+            ["max"] = ReasoningEffort.Max
+        }.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
+
+    private static readonly HashSet<string> EmptyVariants = new(StringComparer.OrdinalIgnoreCase);
+
     private readonly CapabilityCache? _cache;
     private readonly AIProviderInfo[]? _providers;
+
+    // Catalog observed by the in-memory constructor or by the most recent async cache
+    // probe (GetCacheStatusAsync / WarmUpAsync / GetSupportedReasoningValuesAsync).
+    // Synchronous query paths read only this snapshot and never block on I/O; before the
+    // first probe they see the empty catalog and fall back to auto-only / null model.
+    private volatile CatalogSnapshot? _loaded;
 
     public ModelsDevReasoningEffortMatrix(CapabilityCache cache)
     {
@@ -59,16 +82,19 @@ public sealed class ModelsDevReasoningEffortMatrix : IReasoningEffortMatrix
 
     internal ModelsDevReasoningEffortMatrix(AIProviderInfo[] providers)
     {
-        _providers = providers;
+        _providers = providers ?? [];
+        _loaded = new CatalogSnapshot(_providers, CacheStatus.Fresh);
     }
 
     /// <summary>
-    /// Synchronous status probe. Blocks on cache I/O; prefer
-    /// <see cref="GetCacheStatusAsync"/> in async paths.
+    /// Last observed cache status, read from memory without I/O. Until an async probe
+    /// runs it reports <see cref="CacheStatus.Fresh"/>; prefer
+    /// <see cref="GetCacheStatusAsync"/> to probe the backing source (which can hit
+    /// the network).
     /// </summary>
     public CacheStatus CacheStatus => _cache is null
         ? CacheStatus.Fresh
-        : _cache.GetProviderInfosAsync().GetAwaiter().GetResult().Status;
+        : _loaded?.Status ?? CacheStatus.Fresh;
 
     public Task<CacheStatus> GetCacheStatusAsync(CancellationToken cancellationToken = default)
     {
@@ -86,17 +112,27 @@ public sealed class ModelsDevReasoningEffortMatrix : IReasoningEffortMatrix
             return CacheStatus.Unavailable;
         
         CapabilityCacheResult result = await _cache.GetProviderInfosAsync(cancellationToken).ConfigureAwait(false);
+        CaptureCatalog(result);
         return result.Status;
     }
 
-    public Task WarmUpAsync(CancellationToken cancellationToken = default)
+    /// <summary>
+    /// Stores the probed catalog in memory so synchronous queries read real data
+    /// without ever blocking on cache I/O.
+    /// </summary>
+    private void CaptureCatalog(CapabilityCacheResult result)
+    {
+        _loaded = new CatalogSnapshot(result.Providers ?? [], result.Status);
+    }
+
+    public async Task WarmUpAsync(CancellationToken cancellationToken = default)
     {
         if (_cache is null || _providers is not null)
         {
-            return Task.CompletedTask;
+            return;
         }
 
-        return _cache.GetProviderInfosAsync(cancellationToken);
+        await GetCacheStatusCoreAsync(cancellationToken).ConfigureAwait(false);
     }
 
     public IReadOnlySet<ReasoningEffort> GetSupportedReasoningValues(string model)
@@ -111,6 +147,37 @@ public sealed class ModelsDevReasoningEffortMatrix : IReasoningEffortMatrix
             return AutoOnlySet;
 
         return DeriveSupportedValues(modelInfo);
+    }
+
+    /// <summary>
+    /// Async variant of <see cref="GetSupportedReasoningValues(string)"/>: loads the
+    /// capability catalog without blocking, then answers from memory.
+    /// </summary>
+    public Task<IReadOnlySet<ReasoningEffort>> GetSupportedReasoningValuesAsync(
+        string model, CancellationToken cancellationToken = default)
+    {
+        return GetSupportedReasoningValuesAsync(model, provider: "", cancellationToken);
+    }
+
+    /// <summary>
+    /// Async variant of <see cref="GetSupportedReasoningValues(string, string)"/>: loads the
+    /// capability catalog without blocking, then answers from memory.
+    /// </summary>
+    public async Task<IReadOnlySet<ReasoningEffort>> GetSupportedReasoningValuesAsync(
+        string model, string provider, CancellationToken cancellationToken = default)
+    {
+        await EnsureCatalogLoadedAsync(cancellationToken).ConfigureAwait(false);
+        return GetSupportedReasoningValues(model, provider);
+    }
+
+    private Task EnsureCatalogLoadedAsync(CancellationToken cancellationToken)
+    {
+        if (_cache is null || _loaded is not null)
+        {
+            return Task.CompletedTask;
+        }
+
+        return GetCacheStatusCoreAsync(cancellationToken);
     }
 
     public bool ProducesReasoningOnAuto(string model)
@@ -146,23 +213,17 @@ public sealed class ModelsDevReasoningEffortMatrix : IReasoningEffortMatrix
         if (string.IsNullOrWhiteSpace(model))
             return null;
 
-        AIProviderInfo[] providers = _providers ?? _cache?.GetProviderInfosAsync().GetAwaiter().GetResult().Providers ?? [];
+        // In-memory only: never blocks on cache I/O. Async callers warm the catalog via
+        // GetCacheStatusAsync / WarmUpAsync / GetSupportedReasoningValuesAsync first; the
+        // internal-constructor path always has a snapshot (set in the constructor).
+        CatalogSnapshot? loaded = _loaded;
+        AIProviderInfo[] providers = _providers ?? loaded?.Providers ?? [];
 
         // Variant-aware: translate size suffixes (qwen3.5:9b -> qwen3.5-9b)
         // only when the dash variant exists in the catalogue; otherwise fall back
-        // gracefully to the stripped id (never fabricated).
-        HashSet<string> variants = new(StringComparer.OrdinalIgnoreCase);
-        foreach (AIProviderInfo catalogProvider in providers)
-        {
-            if (catalogProvider.Models.Length == 0)
-                continue;
-
-            foreach (AIModelInfo candidate in catalogProvider.Models)
-            {
-                if (!string.IsNullOrWhiteSpace(candidate.Id))
-                    variants.Add(candidate.Id);
-            }
-        }
+        // gracefully to the stripped id (never fabricated). The variant index is built
+        // once per loaded catalog (memoized on the snapshot) and reused across calls.
+        HashSet<string> variants = loaded?.GetVariants() ?? EmptyVariants;
 
         string normalizedModel = ModelIdNormalizer.ResolveModelId(model, variants)
                                  ?? ModelIdNormalizer.ResolveModelId(model, availableVariants: null)
@@ -241,16 +302,49 @@ public sealed class ModelsDevReasoningEffortMatrix : IReasoningEffortMatrix
 
     private static ReasoningEffort? ParseEffortValue(string value)
     {
-        return value.ToLowerInvariant() switch
+        return EffortNameMap.TryGetValue(value, out ReasoningEffort effort) ? effort : null;
+    }
+
+    /// <summary>
+    /// Immutable view of one loaded provider catalog. The model-variant index is built
+    /// at most once per snapshot (i.e. per loaded catalog) and reused across queries;
+    /// concurrent first callers may build an equivalent set twice, which is benign.
+    /// </summary>
+    private sealed class CatalogSnapshot(AIProviderInfo[] providers, CacheStatus status)
+    {
+        private volatile HashSet<string>? _variants;
+
+        public AIProviderInfo[] Providers { get; } = providers;
+
+        public CacheStatus Status { get; } = status;
+
+        public HashSet<string> GetVariants()
         {
-            "on" => ReasoningEffort.On,
-            "off" => ReasoningEffort.Off,
-            "low" => ReasoningEffort.Low,
-            "medium" => ReasoningEffort.Medium,
-            "high" => ReasoningEffort.High,
-            "xhigh" => ReasoningEffort.XHigh,
-            "max" => ReasoningEffort.Max,
-            _ => null
-        };
+            HashSet<string>? variants = _variants;
+            if (variants is not null)
+                return variants;
+
+            HashSet<string> built = BuildVariants(Providers);
+            _variants = built;
+            return built;
+        }
+
+        private static HashSet<string> BuildVariants(AIProviderInfo[] providers)
+        {
+            HashSet<string> variants = new(StringComparer.OrdinalIgnoreCase);
+            foreach (AIProviderInfo catalogProvider in providers)
+            {
+                if (catalogProvider.Models.Length == 0)
+                    continue;
+
+                foreach (AIModelInfo candidate in catalogProvider.Models)
+                {
+                    if (!string.IsNullOrWhiteSpace(candidate.Id))
+                        variants.Add(candidate.Id);
+                }
+            }
+
+            return variants;
+        }
     }
 }
