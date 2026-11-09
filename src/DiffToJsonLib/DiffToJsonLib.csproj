@@ -53,6 +53,7 @@
         <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       </PackageReference>
       <PackageReference Include="Microsoft.Extensions.AI.Abstractions"/>
+      <PackageReference Include="Microsoft.Extensions.DependencyInjection" VersionOverride="10.0.14" />
       <PackageReference Include="ModelsDotDevSharp"/>
       <PackageReference Include="Microsoft.Extensions.AI.OpenAI" />
       <PackageReference Include="Microsoft.Extensions.Compliance.Redaction"/>
