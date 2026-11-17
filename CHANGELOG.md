@@ -5,20 +5,43 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.8.0] - Unreleased
+
+### Added
+
+- `IFileSystem` (System.IO.Abstractions) injection across the capability cache, license analyzer, writers, and extraction run pipeline; `Program.cs` binds the real `FileSystem` in DI, replacing static `File`/`Directory` calls with testable file system abstractions.
+- `TestableIO.System.IO.Abstractions` (lib), `TestableIO.System.IO.Abstractions.Wrappers` (CLI), and `TestableIO.System.IO.Abstractions.TestingHelpers` (tests) packages.
+- `Meziantou.Analyzer` added to both src projects.
+- Warm snapshot API on `IReasoningEffortMatrix`/`ModelsDevReasoningEffortMatrix`: `GetSupportedReasoningValuesAsync`, a memoized model-variant index per loaded catalog, and `FrozenDictionary` effort-name lookup; sync queries now read a warm in-memory catalog snapshot instead of blocking on network I/O.
+- Apache 2.0 license headers on the remaining 19 src files.
+- Dependency-advisories note in `SECURITY.md`.
+
+### Changed
+
+- Run input model refactored: `RunInputs` replaced by `RawValue` (with `EffectiveValue`, `Resolve`, and `From`) plus `RunRawInput` and `RunTrainingInput`.
+- Reasoning effort wire mapping for Effort-type models is now documented and covered by tests: on OpenAI-style providers `auto`/`on` map to `medium` and `off` sends an explicit `none`; on Anthropic Effort models `auto`/`on` omit the property and `off` sends `reasoning_effort: off`.
+- `README.md` reasoning effort section rewritten to describe catalog-derived, option-type-driven validation instead of the old hardcoded per-model family lists.
+- Performance: stream UTF-8 JSONL directly to the underlying stream (no UTF-16 round-trip); single-buffer capability fetch via `ResponseHeadersRead`; frozen provider map; allocation-free span PII redaction; single-pass prompt substitution with opaque replacement values; reduced per-line and per-commit allocations in `GitLogParser`.
+- Style: sealed `GitCommitParser`, `LlmAssistantWriter`, `AILicenseAnalyzer`, and both writers; removed redundant and empty comments; culture-invariant provider dispatch in `ChatClientFactory` (`ToLowerInvariant`).
+- Prompt placeholder validation now uses a named capture group.
+- Dependabot cooldown reduced to 3 days.
+- Global usings cleanup.
+- **Runtime dependencies**: `CliInvoke` and `CliInvoke.Core` 3.0.3 to 3.1.1; `Anthropic` 12.57.0 to 13.9.0; `Microsoft.Extensions.AI.Abstractions`, `Microsoft.Extensions.AI.OpenAI` and `Microsoft.Extensions.Compliance.Redaction` 10.11.0 to 11.0.0; `Microsoft.Extensions.DependencyInjection` 10.0.13 to 10.0.15; `OllamaSharp` 5.5.0 to 5.5.2; `Kevlar` 1.3.0 to 1.5.0; `System.CommandLine` 2.0.13 to 3.0.0; added `TestableIO.System.IO.Abstractions` 23.0.1 (lib) and `TestableIO.System.IO.Abstractions.Wrappers` 23.0.1 (CLI); added `Meziantou.Analyzer` 3.0.341.
+- **Testing dependencies**: `FsCheck` 3.4.0 to 3.6.0; `TUnit` 1.75.0 to 1.86.0; added `TestableIO.System.IO.Abstractions.TestingHelpers` 23.0.1.
 
 ### Removed
 
 - Removed the obsolete hardcoded `ReasoningEffortMatrix` (marked `[Obsolete]` and superseded by the models.dev-backed `ModelsDevReasoningEffortMatrix` in 0.6.0) and its test class. Supported reasoning values are now derived entirely from catalog capability data, plus the small intentional exceptions-only auto table (MiniMax M series, `deepseek-chat`).
 
-### Changed
-
-- `README.md` reasoning effort section rewritten to describe catalog-derived, option-type-driven validation instead of the old hardcoded per-model family lists.
-- Reasoning effort wire mapping for Effort-type models is now documented and covered by tests: on OpenAI-style providers `auto`/`on` map to `medium` and `off` sends an explicit `none`; on Anthropic Effort models `auto`/`on` omit the property and `off` sends `reasoning_effort: off`.
-
 ### Fixed
 
 - Prompt placeholder validation no longer rejects every built-in preset. `RegexOptions.ExplicitCapture` had made the regex's unnamed capture group non-capturing, so extracted placeholder names were always empty (`unknown placeholder '{}'`), the `PromptPresets` type initializer threw, and any code path touching prompt presets failed with `TypeInitializationException`. The pattern now uses a named capture group.
+- Culture-invariant provider dispatch in `ChatClientFactory`: switched from `ToLower(CurrentCulture)` to `ToLowerInvariant` to avoid misrouting provider ids under cultures with dotted/dotless I casing.
+
+### Security
+
+- Pinned GitHub-owned actions by hash in the publish-nuget workflow.
+- Documented dependency advisories in `SECURITY.md`.
 
 
 ## [0.7.0] - 2026-10-15
