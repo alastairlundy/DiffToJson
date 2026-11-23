@@ -24,8 +24,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Prompt placeholder validation now uses a named capture group.
 - Dependabot cooldown reduced to 3 days.
 - Global usings cleanup.
-- **Runtime dependencies**: `CliInvoke` and `CliInvoke.Core` 3.0.3 to 3.1.1; `Anthropic` 12.57.0 to 13.9.0; `Microsoft.Extensions.AI.Abstractions`, `Microsoft.Extensions.AI.OpenAI` and `Microsoft.Extensions.Compliance.Redaction` 10.11.0 to 11.0.0; `Microsoft.Extensions.DependencyInjection` 10.0.13 to 10.0.15; `OllamaSharp` 5.5.0 to 5.5.2; `Kevlar` 1.3.0 to 1.5.0; `System.CommandLine` 2.0.13 to 3.0.0; added `TestableIO.System.IO.Abstractions` 23.0.1 (lib) and `TestableIO.System.IO.Abstractions.Wrappers` 23.0.1 (CLI); added `Meziantou.Analyzer` 3.0.341.
-- **Testing dependencies**: `FsCheck` 3.4.0 to 3.6.0; `TUnit` 1.75.0 to 1.86.0; added `TestableIO.System.IO.Abstractions.TestingHelpers` 23.0.1.
+- **Runtime dependencies**: `CliInvoke` and `CliInvoke.Core` 3.0.3 to 3.2.0-beta.1; `Anthropic` 12.57.0 to 13.13.0; `Microsoft.Extensions.AI.Abstractions`, `Microsoft.Extensions.AI.OpenAI` and `Microsoft.Extensions.Compliance.Redaction` 10.11.0 to 11.0.1; `Microsoft.Extensions.DependencyInjection` 10.0.13 to 11.0.0; `OllamaSharp` 5.5.0 to 5.5.2; `Kevlar` 1.3.0 to 1.5.1; `System.CommandLine` 2.0.13 to 3.0.0; added `TestableIO.System.IO.Abstractions` 23.1.0 (lib) and `TestableIO.System.IO.Abstractions.Wrappers` 23.1.0 (CLI); added `Meziantou.Analyzer` 3.0.342.
+- **Testing dependencies**: `FsCheck` 3.4.0 to 3.6.0; `TUnit` 1.75.0 to 1.87.12; added `TestableIO.System.IO.Abstractions.TestingHelpers` 23.1.0.
 
 ### Removed
 - Removed the obsolete hardcoded `ReasoningEffortMatrix` (marked `[Obsolete]` and superseded by the models.dev-backed `ModelsDevReasoningEffortMatrix` in 0.6.0) and its test class. Supported reasoning values are now derived entirely from catalog capability data, plus the small intentional exceptions-only auto table (MiniMax M series, `deepseek-chat`).
