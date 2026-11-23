@@ -3,9 +3,9 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="CliInvoke" Version="3.2.0-alpha.1" />
-    <PackageVersion Include="CliInvoke.Core" Version="3.2.0-alpha.1" />
-    <PackageVersion Include="Anthropic" Version="13.12.0" />
+    <PackageVersion Include="CliInvoke" Version="3.2.0-beta.1" />
+    <PackageVersion Include="CliInvoke.Core" Version="3.2.0-beta.1" />
+    <PackageVersion Include="Anthropic" Version="13.13.0" />
     <PackageVersion Include="FsCheck" Version="3.6.0" />
     <PackageVersion Include="Meziantou.Analyzer" Version="3.0.342" />
     <PackageVersion Include="Microsoft.Extensions.AI.Abstractions" Version="11.0.1" />
