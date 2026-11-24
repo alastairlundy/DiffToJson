@@ -27,33 +27,33 @@
 This can be useful for preparing git commit diffs and message data for training AI/ML models or similar use cases.</Description>
     <Copyright>Copyright (c) Alastair Lundy 2026</Copyright>
     <PackageTags>git, diff, commit, JSONL, JSON</PackageTags>
-    <PackageReleaseNotes>## Changes since 0.6.0
+    <PackageReleaseNotes># Changes since 0.7.0
 
-### Added
+## Added
+- File access in the library now goes through an injectable file system, so tests can run without touching the real file system.
+- After the models.dev catalog loads, reading supported reasoning values no longer waits on a network request.
 
-- New extraction run pipeline: library-side contracts (`IExtractionRunPipeline`, `RunInputs`, `RunProgress`) plus a CLI-side `CliExtractionRunPipeline` implementation, wired into DI with a thin CLI adapter delegating to it.
-- Explicit `ExitCode` mapping for pipeline outcomes and cancellation.
-- Reasoning effort matrix entries exposed through `IReasoningEffortMatrix` / `ReasoningEffortMatrix`.
-- Prompt placeholder vocabulary widened to five placeholders.
-- New `DiffToJsonCli.Tests` project covering pipeline precedence, gates, fallback, effort, dispatch, phases, facts, cancellation and exit codes; added to the solution and CI workflow.
+## Changed
+- `RunInputs` is replaced by `RawValue`, `RunRawInput`, and `RunTrainingInput`.
+- Reasoning effort mapping is now documented and tested. OpenAI-style providers map `auto` and `on` to `medium`, and send `none` for `off`. Anthropic Effort models omit the property for `auto` and `on`, and send `reasoning_effort: off` for `off`.
+- Extraction uses less memory during JSONL writing, PII redaction, prompt substitution, and git log parsing.
+- Updated dependencies, including `CliInvoke` 3.2.0-beta.1, `Anthropic` 13.13.0, `Microsoft.Extensions.AI` packages 11.0.1, `Microsoft.Extensions.DependencyInjection` 11.0.0, `System.CommandLine` 3.0.0, and `TUnit` 1.87.12.
 
-### Changed
+## Removed
+- Removed the old hardcoded `ReasoningEffortMatrix`. Supported reasoning values now come from the models.dev catalog, with a small manual exception for MiniMax M-series models and `deepseek-chat`.
 
-- Updated CliInvoke to 3.0.3 (3.0.0 is affected by [GHSA-h4rx-7jm8-fr3g](https://github.com/alastairlundy/CliInvoke/security/advisories/GHSA-h4rx-7jm8-fr3g)), but DiffToJson never invokes a runner, so the vulnerable code path is unreachable
-- `Program.cs` substantially reworked to delegate to the extraction run pipeline; license file discovery moved out of the CLI helpers.
-- Dependabot configuration: schedules tuned and a version cooldown added.
-- **Runtime dependencies**: `CliInvoke` and `CliInvoke.Core` 3.0.0 to 3.0.3; `Anthropic` 12.48.0 to 12.57.0; `Microsoft.Extensions.AI.Abstractions`, `Microsoft.Extensions.AI.OpenAI` and `Microsoft.Extensions.Compliance.Redaction` 10.10.0 to 10.11.0; `Microsoft.Extensions.DependencyInjection` 10.0.12 to 10.0.13; `OllamaSharp` 5.4.30 to 5.5.0; `Kevlar` 1.1.1 to 1.3.0; `System.CommandLine` 2.0.12 to 2.0.13.
-- **Testing dependencies**: `TUnit` 1.68.4 to 1.75.0.
-- `GLOSSARY.md` updated with new pipeline terminology.
+## Fixed
+- Built-in prompt presets failed to load because placeholder names were parsed as empty. The placeholder pattern now captures names correctly.
+- Provider ids are now lowercased in a culture-safe way, so they resolve correctly in cultures such as Turkish.
 
-### Fixed
-
-- `GitLogParser` output is now platform-independent, and golden file comparison normalizes line endings across OSes.
-- Code review findings addressed across the extraction run pipeline.</PackageReleaseNotes>
-    <Version>0.7.0</Version>
-    <PackageVersion>0.7.0</PackageVersion>
-    <AssemblyVersion>0.7.0.0</AssemblyVersion>
-    <FileVersion>0.7.0.0</FileVersion>
+## Security
+- The publish-nuget workflow now pins GitHub-owned actions by hash.
+- `SECURITY.md` now documents dependency advisories.
+</PackageReleaseNotes>
+    <Version>0.8.0</Version>
+    <PackageVersion>0.8.0</PackageVersion>
+    <AssemblyVersion>0.8.0.0</AssemblyVersion>
+    <FileVersion>0.8.0.0</FileVersion>
   </PropertyGroup>
 
   <PropertyGroup>
